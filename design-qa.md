@@ -61,6 +61,10 @@ The revised implementation reduces the initial hero height and image scale so th
 - The reader now lazy-loads the full migrated chapter bundle only when a learner starts a chapter, keeping the homepage bundle smaller.
 - Full migration check: 35 chapter records, 67 local images, 7 embedded Feishu sheets converted to web tables, and 1 embedded MP4 downloaded locally. No migrated image path is missing.
 - Progress and case favorites now persist in local storage across refreshes; opening the course resumes at the first unfinished chapter.
+- The course catalog now supports searching by chapter number, title, level, exercise, output, or keyword, with an explicit empty state when nothing matches.
+- The lesson reader renders the migrated Markdown body, original local images, converted tables, Prompt code blocks, and the preserved chapter video instead of only showing a summary card.
+- Paid course cards now open real detail panels for Codex 橙皮书, image2 生图训练营, and 大学生求职 AI 课, including audience, duration, syllabus, outputs, and a local interest callback.
+- Login and registration now use the same honest local-progress entry point; no placeholder backend success state is shown.
 
 ## Implementation Checklist
 
@@ -73,8 +77,8 @@ The revised implementation reduces the initial hero height and image scale so th
 
 ## Follow-up Polish
 
-- Add real course detail pages and authenticated progress persistence.
-- Expand the lesson reader with the full chapter body, original images, tables, prompts, and downloadable materials from the free course.
+- Add real course routes and authenticated progress persistence.
+- Add downloadable chapter materials and a dedicated full Skill detail surface.
 - Add real routes and backend persistence for paid enrollment, case submissions, Skill details, knowledge pages, comments, and learner progress.
 - Connect case, Skill, knowledge, and contribution content to a CMS or database.
 - Add the final brand font and replace placeholder community metrics with live data.

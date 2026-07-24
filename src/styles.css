@@ -127,7 +127,7 @@ h1 em { color: var(--orange); font-style: normal; }
 .learning-strip { display: grid; grid-template-columns: 260px 1fr; gap: 30px; align-items: center; padding: 42px 0 50px; border-top: 1px solid var(--line); }
 .learning-strip h2 { margin-bottom: 8px; font-size: 24px; letter-spacing: -.05em; }
 .learning-strip > div:first-child > p:last-child { color: var(--muted); font-size: 12px; line-height: 1.6; }
-.learning-cards { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; }
+.learning-cards { display: grid; grid-template-columns: 1.25fr repeat(3, 1fr); gap: 10px; }
 .learning-card { min-height: 157px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; text-align: left; transition: transform .2s ease, border-color .2s ease; }
 .learning-card:hover { border-color: #f3a981; transform: translateY(-3px); }
 .learning-card.featured { background: #fff0e7; }
@@ -180,6 +180,10 @@ h1 em { color: var(--orange); font-style: normal; }
 .course-modal-stats small { color: var(--muted); font-size: 10px; }
 .course-modal-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); gap: 20px; min-height: 490px; }
 .course-chapter-list { display: grid; gap: 15px; max-height: 510px; padding-right: 8px; overflow: auto; }
+.course-search { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 11px; border: 1px solid #efd9cc; border-radius: 10px; background: #fffaf7; color: #a48879; }
+.course-search:focus-within { border-color: var(--orange); box-shadow: 0 0 0 3px #fff0e7; }
+.course-search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 12px; }
+.course-empty { padding: 34px 18px; border: 1px dashed #e5c7b8; border-radius: 12px; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.6; }
 .course-group { padding: 14px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.58); }
 .course-group-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
 .course-group-heading b, .course-group-heading small { display: block; }
@@ -268,6 +272,14 @@ h1 em { color: var(--orange); font-style: normal; }
 .modal textarea:focus { border-color: var(--orange); }
 .modal-course-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .modal-course-meta span { padding: 6px 9px; border-radius: 99px; background: var(--pale-orange); color: var(--deep-orange); font-size: 11px; }
+.paid-course-modal { width: min(610px, 100%); }
+.paid-course-content .eyebrow { margin-bottom: 9px; }
+.paid-course-content > h2 { margin-bottom: 10px; }
+.paid-course-content > p:not(.eyebrow) { margin-bottom: 16px; }
+.paid-course-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0 23px; }
+.paid-course-grid section { padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.paid-course-grid b { display: block; margin-bottom: 10px; color: var(--deep-orange); font-size: 12px; }
+.paid-course-grid ul { display: grid; gap: 8px; margin: 0; padding-left: 17px; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .toast { position: fixed; z-index: 50; right: 28px; bottom: 25px; display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 10px; background: #24201e; color: white; font-size: 12px; box-shadow: 0 12px 30px rgba(36,32,30,.18); }
 .toast svg { color: #7fe0ab; }
 
@@ -284,6 +296,7 @@ h1 em { color: var(--orange); font-style: normal; }
   .hero { grid-template-columns: 1fr .8fr; }
   .hero-art { min-height: 280px; }
   .hero-note { display: none; }
+  .learning-cards { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 760px) {
@@ -345,4 +358,5 @@ h1 em { color: var(--orange); font-style: normal; }
   .course-markdown img { max-width: 100%; }
   .course-reader-footer { flex-wrap: wrap; padding: 15px 18px 18px; }
   .course-reader-footer .course-reader-complete { order: -1; width: 100%; justify-content: center; }
+  .paid-course-grid { grid-template-columns: 1fr; }
 }

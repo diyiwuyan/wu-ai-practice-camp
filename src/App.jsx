@@ -64,6 +64,16 @@ const skills = [
 ]
 
 function CourseModal({ selectedChapter, onSelect, onStart }) {
+  const [keyword, setKeyword] = useState('')
+  const normalizedKeyword = keyword.trim().toLowerCase()
+  const filteredGroups = useMemo(() => {
+    if (!normalizedKeyword) return freeCourseGroups
+    return freeCourseGroups.map((group) => ({
+      ...group,
+      chapters: group.chapters.filter((chapter) => [chapter.number, chapter.title, chapter.level, chapter.intro, chapter.exercise, chapter.output].join(' ').toLowerCase().includes(normalizedKeyword)),
+    })).filter((group) => group.chapters.length)
+  }, [normalizedKeyword])
+
   return (
     <div className="course-modal-content">
       <div className="course-modal-heading">
@@ -77,12 +87,14 @@ function CourseModal({ selectedChapter, onSelect, onStart }) {
       </div>
       <div className="course-modal-layout">
         <div className="course-chapter-list">
-          {freeCourseGroups.map((group) => (
+          <label className="course-search"><MagnifyingGlass size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索章节、案例或关键词" /></label>
+          {filteredGroups.map((group) => (
             <section key={group.part} className="course-group">
               <div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>
               {group.chapters.map((chapter) => <button key={chapter.number} className={`course-chapter ${selectedChapter.number === chapter.number ? 'selected' : ''}`} onClick={() => onSelect(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}
             </section>
           ))}
+          {!filteredGroups.length && <div className="course-empty">没有找到匹配章节，试试“Skill”“会议”或“自动化”。</div>}
         </div>
         <article className="course-detail">
           <span className="course-detail-number">第 {selectedChapter.number} 章</span>
@@ -94,6 +106,23 @@ function CourseModal({ selectedChapter, onSelect, onStart }) {
           <button className="button button-primary full" onClick={onStart}>开始跟做这门课 <ArrowRight size={17} /></button>
         </article>
       </div>
+    </div>
+  )
+}
+
+function PaidCourseModal({ course, onClose, onNotify }) {
+  return (
+    <div className="paid-course-content">
+      <span className="modal-icon"><Sparkle size={26} /></span>
+      <p className="eyebrow orange"><span /> 付费进阶课程</p>
+      <h2>{course.title}</h2>
+      <p>{course.description}</p>
+      <div className="modal-course-meta"><span>{course.audience}</span><span>{course.duration}</span><span>{course.status}</span></div>
+      <div className="paid-course-grid">
+        <section><b>你会拿到什么</b><ul>{course.outputs.map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section><b>课程重点</b><ul>{course.syllabus.map((item) => <li key={item}>{item}</li>)}</ul></section>
+      </div>
+      <button className="button button-primary full" onClick={() => { onClose(); onNotify(`已记录：${course.title}，开放后会提醒你`) }}>{course.cta} <ArrowRight size={17} /></button>
     </div>
   )
 }
@@ -241,7 +270,7 @@ export function App() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索案例、Skill、课程" />
           </label>
           <button className="icon-button" aria-label="通知" onClick={() => notify('目前没有新的通知')}><Bell size={20} /></button>
-          <button className="button button-outline small" onClick={() => notify('登录功能将在下一版接入')}>登录</button>
+          <button className="button button-outline small" onClick={() => setModal('signup')}>登录</button>
           <button className="button button-primary small" onClick={() => setModal('signup')}>注册</button>
         </div>
       </header>
@@ -276,7 +305,7 @@ export function App() {
               <h2>本周真实案例</h2>
               <p>不是看完就忘的教程，而是拿来就能复现的工作方法。</p>
             </div>
-            <button className="text-link" onClick={() => notify('案例筛选页正在制作中')}>查看全部案例 <ArrowRight size={17} /></button>
+            <button className="text-link" onClick={() => { setQuery(''); scrollTo('cases') }}>查看全部案例 <ArrowRight size={17} /></button>
           </div>
           <div className="content-grid">
             <div className="case-list">
@@ -302,7 +331,7 @@ export function App() {
 
             <aside className="side-stack">
               <section className="side-card" id="skills">
-                <div className="side-heading"><h3>Skill 本周推荐</h3><button className="text-link" onClick={() => notify('Skill 广场正在整理中')}>更多 Skill <ArrowRight size={15} /></button></div>
+                <div className="side-heading"><h3>Skill 本周推荐</h3><button className="text-link" onClick={() => notify('当前页面已展示本周精选 Skill')}>更多 Skill <ArrowRight size={15} /></button></div>
                 <div className="skill-list">{skills.map(({ icon: Icon, name, detail, count }) => <button className="skill-item" key={name} onClick={() => notify(`已打开：${name}`)}><span className="skill-icon"><Icon size={20} weight="duotone" /></span><span><b>{name}</b><small>{detail}</small></span><em>{count}</em></button>)}</div>
               </section>
               <section className="side-card contribution-card" id="community">
@@ -322,13 +351,14 @@ export function App() {
           <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，付费课程带你完成更完整的结果。</p></div>
           <div className="learning-cards">
             <button className="learning-card featured" onClick={openCourse}><span className="course-label">免费课程</span><h3>WorkBuddy 免费实战课</h3><p>35 章完整内容，带你从安装、任务、Skill、实战案例到自己的 AI 工作系统</p><div className="progress"><span style={{ width: `${Math.max(8, Math.round((completedChapters.length / allChapters.length) * 100))}%` }} /></div><small>{completedChapters.length ? `已完成 ${completedChapters.length}/${allChapters.length} 章 · 继续学习` : '查看完整目录，开始第一章'} <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => notify('付费课程详情将在下一版接入')}><span className="course-label paid">付费进阶</span><h3>Codex 橙皮书</h3><p>从 0 到 1 掌握 AI 编程思维与实战方法</p><small>了解课程 <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => notify('付费课程详情将在下一版接入')}><span className="course-label paid">付费进阶</span><h3>image2 生图训练营</h3><p>系统掌握 AI 生图技巧与工作流</p><small>了解课程 <ArrowRight size={16} /></small></button>
+            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: 'Codex 橙皮书', description: '从 0 到 1 掌握 AI 编程思维、代码协作和可交付的软件工作流。适合想把 AI 从聊天工具用成编程搭档的同学。', audience: 'AI 编程入门', duration: '建议 6 周', status: '付费课程模块', outputs: ['一套可复用的 Codex 工作流', '从需求到交付的项目练习', '代码审查与迭代检查表'], syllabus: ['任务拆解与上下文准备', '从原型到可运行产品', '调试、验证与发布'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>Codex 橙皮书</h3><p>从 0 到 1 掌握 AI 编程思维与实战方法</p><small>了解课程 <ArrowRight size={16} /></small></button>
+            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: 'image2 生图训练营', description: '从提示词、参考图到批量生产，建立可复用的视觉内容工作流，适合内容创作者、运营和品牌团队。', audience: 'AI 视觉创作', duration: '建议 4 周', status: '付费课程模块', outputs: ['一套个人生图提示词模板', '从创意到成片的生产流程', '适合发布的封面与配图素材'], syllabus: ['画面拆解与风格控制', '参考图、构图和一致性', '批量生产与内容发布'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>image2 生图训练营</h3><p>系统掌握 AI 生图技巧与工作流</p><small>了解课程 <ArrowRight size={16} /></small></button>
+            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: '大学生求职 AI 课', description: '把 AI 用到求职全流程：方向梳理、简历优化、岗位研究、面试准备和作品集表达，帮助你把准备工作做得更具体。', audience: '大学生与应届生', duration: '建议 3 周', status: '付费课程模块', outputs: ['一份岗位匹配简历', '一套面试问答与复盘卡', '一份可展示的求职作品集'], syllabus: ['目标岗位与优势定位', '简历、作品集和投递策略', '面试模拟与复盘迭代'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>大学生求职 AI 课</h3><p>用 AI 完成从定位、简历到面试的求职闭环</p><small>了解课程 <ArrowRight size={16} /></small></button>
           </div>
         </section>
 
         <section className="page-width roadmap section-block" id="path">
-          <div className="section-heading compact"><div><p className="eyebrow orange"><span /> 学习路径</p><h2>从一个任务，到自己的 AI 工作系统</h2></div><button className="text-link" onClick={() => notify('完整学习路径正在制作中')}>查看完整路径 <ArrowRight size={17} /></button></div>
+          <div className="section-heading compact"><div><p className="eyebrow orange"><span /> 学习路径</p><h2>从一个任务，到自己的 AI 工作系统</h2></div><button className="text-link" onClick={() => scrollTo('path')}>查看完整路径 <ArrowRight size={17} /></button></div>
           <div className="roadmap-line"><span className="roadmap-step active"><b>01</b><strong>先用起来</strong><small>免费入门</small></span><span className="line" /><span className="roadmap-step"><b>02</b><strong>做真实任务</strong><small>案例练习</small></span><span className="line" /><span className="roadmap-step"><b>03</b><strong>沉淀 Skill</strong><small>方法复用</small></span><span className="line" /><span className="roadmap-step"><b>04</b><strong>组建工作流</strong><small>系统进阶</small></span></div>
         </section>
 
@@ -339,7 +369,7 @@ export function App() {
 
       <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills">Skill 广场</a><a href="#community">学员共创</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <><span className="modal-icon"><Plus size={26} /></span><h2>分享你的工作流</h2><p>下一版将支持上传案例、Skill、Prompt 和配套文件。产品投稿审核上线后会正式开放。</p><textarea placeholder="你最想分享什么 AI 工作方法？" /><button className="button button-primary full" onClick={() => { setModal(null); notify('已记录投稿想法，审核入口上线后会通知你') }}>提交想法</button></> : modal === 'signup' ? <><span className="modal-icon"><UserCircle size={26} /></span><h2>加入武同学AI实践营</h2><p>注册后可以记录学习进度、收藏案例，并参与社区共创。</p><button className="button button-primary full" onClick={() => { setModal(null); notify('账号系统正在接入，当前可先用本机保存学习进度') }}>继续注册</button></> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <><span className="modal-icon"><Plus size={26} /></span><h2>分享你的工作流</h2><p>下一版将支持上传案例、Skill、Prompt 和配套文件。产品投稿审核上线后会正式开放。</p><textarea placeholder="你最想分享什么 AI 工作方法？" /><button className="button button-primary full" onClick={() => { setModal(null); notify('已记录投稿想法，审核入口上线后会通知你') }}>提交想法</button></> : modal === 'signup' ? <><span className="modal-icon"><UserCircle size={26} /></span><h2>加入武同学AI实践营</h2><p>注册后可以记录学习进度、收藏案例，并参与社区共创。</p><button className="button button-primary full" onClick={() => { setModal(null); notify('账号系统正在接入，当前可先用本机保存学习进度') }}>继续注册</button></> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
     </div>
   )
