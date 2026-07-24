@@ -26,7 +26,7 @@ const cases = [
     difficulty: '入门',
     saved: '2.5 小时',
     tags: ['WorkBuddy', 'OCR', '表格处理', '自动化'],
-    image: '/assets/case-receipts.jpg',
+    image: 'assets/case-receipts.jpg',
     accent: '01',
   },
   {
@@ -37,7 +37,7 @@ const cases = [
     difficulty: '进阶',
     saved: '1.8 小时',
     tags: ['信息抓取', '总结提炼', '日报生成', '自动化'],
-    image: '/assets/case-briefing.jpg',
+    image: 'assets/case-briefing.jpg',
     accent: '02',
   },
   {
@@ -48,7 +48,7 @@ const cases = [
     difficulty: '进阶',
     saved: '6.0 小时',
     tags: ['网站搭建', '文案生成', '设计生成', '部署上线'],
-    image: '/assets/case-personal-site.jpg',
+    image: 'assets/case-personal-site.jpg',
     accent: '03',
   },
 ]
@@ -129,7 +129,7 @@ export function App() {
             </div>
           </div>
           <div className="hero-art" aria-label="AI 工作流示意图">
-            <img src="/assets/hero-community.jpg" alt="橙色 AI 工作流插画" />
+            <img src="assets/hero-community.jpg" alt="橙色 AI 工作流插画" />
             <div className="hero-note hero-note-one">学以致用<br /><b>知行合一</b></div>
             <div className="hero-note hero-note-two">专注解决<br /><b>实际问题</b></div>
           </div>
