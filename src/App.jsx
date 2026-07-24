@@ -69,7 +69,7 @@ function CourseModal({ selectedChapter, onSelect, onStart }) {
           <span className="modal-icon"><FileText size={26} /></span>
           <p className="eyebrow orange"><span /> 免费完整课程</p>
           <h2>WorkBuddy 免费实战课</h2>
-          <p>把原来的免费课内容搬到课程中心：27 章、11 个真实案例、40+ 个可复制 Prompt，从安装开始一直练到自己的工作系统。</p>
+          <p>把飞书第二稿的免费课内容搬到课程中心：35 章、17 个实战案例、40+ 个可复制 Prompt，从安装开始一直练到自己的工作系统。</p>
         </div>
         <div className="course-modal-stats">{freeCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>
       </div>
@@ -286,7 +286,7 @@ export function App() {
         <section className="page-width learning-strip" id="courses">
           <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，付费课程带你完成更完整的结果。</p></div>
           <div className="learning-cards">
-            <button className="learning-card featured" onClick={openCourse}><span className="course-label">免费课程</span><h3>WorkBuddy 免费实战课</h3><p>27 章完整内容，带你从安装、任务、Skill 到自己的 AI 工作系统</p><div className="progress"><span style={{ width: `${Math.max(8, Math.round((completedChapters.length / allChapters.length) * 100))}%` }} /></div><small>{completedChapters.length ? `已完成 ${completedChapters.length}/${allChapters.length} 章 · 继续学习` : '查看完整目录，开始第一章'} <ArrowRight size={16} /></small></button>
+            <button className="learning-card featured" onClick={openCourse}><span className="course-label">免费课程</span><h3>WorkBuddy 免费实战课</h3><p>35 章完整内容，带你从安装、任务、Skill、实战案例到自己的 AI 工作系统</p><div className="progress"><span style={{ width: `${Math.max(8, Math.round((completedChapters.length / allChapters.length) * 100))}%` }} /></div><small>{completedChapters.length ? `已完成 ${completedChapters.length}/${allChapters.length} 章 · 继续学习` : '查看完整目录，开始第一章'} <ArrowRight size={16} /></small></button>
             <button className="learning-card" onClick={() => notify('付费课程详情将在下一版接入')}><span className="course-label paid">付费进阶</span><h3>Codex 橙皮书</h3><p>从 0 到 1 掌握 AI 编程思维与实战方法</p><small>了解课程 <ArrowRight size={16} /></small></button>
             <button className="learning-card" onClick={() => notify('付费课程详情将在下一版接入')}><span className="course-label paid">付费进阶</span><h3>image2 生图训练营</h3><p>系统掌握 AI 生图技巧与工作流</p><small>了解课程 <ArrowRight size={16} /></small></button>
           </div>

@@ -48,14 +48,14 @@ The revised implementation reduces the initial hero height and image scale so th
 - Search `发票`: filters to the invoice case and leaves one matching heading visible.
 - `立即发布案例`: opens the contribution dialog; `关闭` returns to the page.
 - `查看` on a case: opens the case detail dialog; `关闭` returns to the page.
-- `WorkBuddy 免费实战课`: opens the course dialog, exposes all 27 chapter entries across four parts, supports chapter selection, and `关闭` returns to the page.
+- `WorkBuddy 免费实战课`: opens the course dialog, exposes all 35 chapter entries across four parts, supports chapter selection, and `关闭` returns to the page.
 - Browser console error check: no error-level entries returned.
 - Production checks: `npm run build` and `npm run test:sites` both passed.
 
 ## Latest revision
 
 - Navigation labels were increased to 16px on desktop and kept at 14px for narrower layouts, preserving the compact mobile header.
-- The free WorkBuddy course now has a real catalog modal with grouped chapters, learning time, difficulty, chapter introductions, exercises, and expected outputs.
+- The free WorkBuddy course now has a real catalog modal with all 35 chapters from the Feishu second draft, grouped as 01—10, 11—29, 30—33, and 34—35, with learning time, difficulty, chapter introductions, exercises, and expected outputs.
 - “开始跟做这门课” now opens a persistent lesson reader instead of closing the modal and returning to the homepage. The reader supports returning to the catalog, previous/next chapter navigation, marking the current chapter complete, and showing course progress.
 - Browser check: the reader opened at chapter 01, marking it complete changed the action state and progress, next chapter opened chapter 02, returning to the catalog worked, and no console errors were reported.
 
