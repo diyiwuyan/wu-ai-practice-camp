@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { marked } from 'marked'
 import {
   ArrowRight,
   ArrowLeft,
@@ -18,6 +19,7 @@ import {
   X,
 } from '@phosphor-icons/react'
 import { freeCourseGroups, freeCourseStats } from './courseContent'
+import { hydrateCourseEmbeds } from './courseEmbeds'
 
 const cases = [
   {
@@ -98,11 +100,13 @@ function CourseModal({ selectedChapter, onSelect, onStart }) {
 
 const allChapters = freeCourseGroups.flatMap((group) => group.chapters)
 
-function CourseReader({ chapter, completedChapters, onBack, onPrevious, onNext, onComplete }) {
+function CourseReader({ chapter, details, loadError, completedChapters, onBack, onPrevious, onNext, onComplete }) {
   const chapterIndex = allChapters.findIndex((item) => item.number === chapter.number)
   const isFirst = chapterIndex === 0
   const isLast = chapterIndex === allChapters.length - 1
   const isCompleted = completedChapters.includes(chapter.number)
+  const sourceMarkdown = hydrateCourseEmbeds(details?.[chapter.number]?.markdown || '')
+  const sourceHtml = useMemo(() => marked.parse(sourceMarkdown, { gfm: true, breaks: true }), [sourceMarkdown])
 
   return (
     <div className="course-reader-content">
@@ -118,22 +122,28 @@ function CourseReader({ chapter, completedChapters, onBack, onPrevious, onNext, 
           <div className="course-reader-aside-meta"><span>{chapter.time}</span><span>目标产出：{chapter.output}</span></div>
         </aside>
         <article className="course-reader-main">
-          <p className="eyebrow orange"><span /> 本章学习卡</p>
-          <h3>先理解，再动手</h3>
-          <p className="course-reader-lede">这一章不要求一次学完所有功能，只需要围绕一个真实任务，完成下面这张最小闭环。</p>
-          <div className="course-reader-grid">
-            <section className="course-reader-card"><span>01</span><h4>跟着做</h4><p>{chapter.exercise}</p></section>
-            <section className="course-reader-card"><span>02</span><h4>完成产出</h4><p>{chapter.output}</p></section>
-          </div>
-          <section className="course-reader-checklist">
-            <h4>本章完成标准</h4>
-            <ol>
-              <li>先确认输入材料、交付格式和验收标准。</li>
-              <li>用小样本跟做一遍，记录中途的判断和失败点。</li>
-              <li>换成自己的任务再做一遍，并保留可复用的步骤。</li>
-            </ol>
-          </section>
-          <div className="course-reader-tip"><CheckCircle size={18} weight="fill" /> 涉及文件、外部发布或高风险操作时，先停在草稿和预览阶段，确认后再执行。</div>
+          {loadError ? <div className="course-reader-loading error">正文加载失败，请刷新后重试。</div> : !details ? <div className="course-reader-loading">正在加载本章正文、图片和表格…</div> : <>
+            <div className="course-reader-source-note"><span>飞书第二稿 · 原文迁移</span><span>正文、图片、表格、Prompt 已保留</span></div>
+            <div className="course-markdown" dangerouslySetInnerHTML={{ __html: sourceHtml }} />
+            <div className="course-reader-practice">
+              <p className="eyebrow orange"><span /> 本章学习卡</p>
+              <h3>看完原文，马上动手</h3>
+              <p className="course-reader-lede">不要只看懂这一章，围绕一个真实任务完成练习，并留下可以复用的产出。</p>
+              <div className="course-reader-grid">
+                <section className="course-reader-card"><span>01</span><h4>跟着做</h4><p>{chapter.exercise}</p></section>
+                <section className="course-reader-card"><span>02</span><h4>完成产出</h4><p>{chapter.output}</p></section>
+              </div>
+            </div>
+            <section className="course-reader-checklist">
+              <h4>本章完成标准</h4>
+              <ol>
+                <li>先确认输入材料、交付格式和验收标准。</li>
+                <li>用小样本跟做一遍，记录中途的判断和失败点。</li>
+                <li>换成自己的任务再做一遍，并保留可复用的步骤。</li>
+              </ol>
+            </section>
+            <div className="course-reader-tip"><CheckCircle size={18} weight="fill" /> 涉及文件、外部发布或高风险操作时，先停在草稿和预览阶段，确认后再执行。</div>
+          </>}
         </article>
       </div>
       <footer className="course-reader-footer">
@@ -147,11 +157,23 @@ function CourseReader({ chapter, completedChapters, onBack, onPrevious, onNext, 
 
 export function App() {
   const [query, setQuery] = useState('')
-  const [saved, setSaved] = useState([])
+  const [saved, setSaved] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem('wu-ai-saved-cases') || '[]') } catch { return [] }
+  })
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState('')
+  const [courseDetails, setCourseDetails] = useState(null)
+  const [courseLoadError, setCourseLoadError] = useState(false)
   const [selectedChapter, setSelectedChapter] = useState(freeCourseGroups[0].chapters[0])
-  const [completedChapters, setCompletedChapters] = useState([])
+  const [completedChapters, setCompletedChapters] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem('wu-ai-completed-chapters') || '[]') } catch { return [] }
+  })
+
+  useEffect(() => { window.localStorage.setItem('wu-ai-saved-cases', JSON.stringify(saved)) }, [saved])
+  useEffect(() => { window.localStorage.setItem('wu-ai-completed-chapters', JSON.stringify(completedChapters)) }, [completedChapters])
+  useEffect(() => {
+    if (modal === 'reader') document.querySelector('.course-reader-modal .course-reader-main')?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [modal, selectedChapter.number])
 
   const filteredCases = useMemo(() => {
     const text = query.trim().toLowerCase()
@@ -170,8 +192,21 @@ export function App() {
   }
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  const openCourse = () => { setSelectedChapter(freeCourseGroups[0].chapters[0]); setModal('course') }
-  const openReader = () => setModal('reader')
+  const openCourse = () => {
+    const nextChapter = allChapters.find((chapter) => !completedChapters.includes(chapter.number)) || allChapters[0]
+    setSelectedChapter(nextChapter)
+    setModal('course')
+  }
+  const openReader = async () => {
+    setModal('reader')
+    if (courseDetails) return
+    try {
+      const module = await import('./courseDetails')
+      setCourseDetails(module.courseDetails)
+    } catch {
+      setCourseLoadError(true)
+    }
+  }
   const moveChapter = (offset) => {
     const currentIndex = allChapters.findIndex((item) => item.number === selectedChapter.number)
     const nextChapter = allChapters[currentIndex + offset]
@@ -179,7 +214,7 @@ export function App() {
   }
   const completeChapter = () => {
     setCompletedChapters((current) => current.includes(selectedChapter.number) ? current : [...current, selectedChapter.number])
-    notify(`第 ${selectedChapter.number} 章已完成，继续保持`) 
+    notify(`第 ${selectedChapter.number} 章已完成，继续保持`)
   }
 
   return (
@@ -304,7 +339,7 @@ export function App() {
 
       <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills">Skill 广场</a><a href="#community">学员共创</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <><span className="modal-icon"><Plus size={26} /></span><h2>分享你的工作流</h2><p>下一版将支持上传案例、Skill、Prompt 和配套文件。现在可以先留下你的想法。</p><textarea placeholder="你最想分享什么 AI 工作方法？" /><button className="button button-primary full" onClick={() => { setModal(null); notify('感谢你的分享，投稿入口即将开放') }}>提交想法</button></> : modal === 'signup' ? <><span className="modal-icon"><UserCircle size={26} /></span><h2>加入武同学AI实践营</h2><p>注册后可以记录学习进度、收藏案例，并参与社区共创。</p><button className="button button-primary full" onClick={() => { setModal(null); notify('注册功能将在下一版接入') }}>继续注册</button></> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <><span className="modal-icon"><Plus size={26} /></span><h2>分享你的工作流</h2><p>下一版将支持上传案例、Skill、Prompt 和配套文件。产品投稿审核上线后会正式开放。</p><textarea placeholder="你最想分享什么 AI 工作方法？" /><button className="button button-primary full" onClick={() => { setModal(null); notify('已记录投稿想法，审核入口上线后会通知你') }}>提交想法</button></> : modal === 'signup' ? <><span className="modal-icon"><UserCircle size={26} /></span><h2>加入武同学AI实践营</h2><p>注册后可以记录学习进度、收藏案例，并参与社区共创。</p><button className="button button-primary full" onClick={() => { setModal(null); notify('账号系统正在接入，当前可先用本机保存学习进度') }}>继续注册</button></> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
     </div>
   )

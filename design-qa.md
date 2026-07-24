@@ -58,6 +58,9 @@ The revised implementation reduces the initial hero height and image scale so th
 - The free WorkBuddy course now has a real catalog modal with all 35 chapters from the Feishu second draft, grouped as 01—10, 11—29, 30—33, and 34—35, with learning time, difficulty, chapter introductions, exercises, and expected outputs.
 - “开始跟做这门课” now opens a persistent lesson reader instead of closing the modal and returning to the homepage. The reader supports returning to the catalog, previous/next chapter navigation, marking the current chapter complete, and showing course progress.
 - Browser check: the reader opened at chapter 01, marking it complete changed the action state and progress, next chapter opened chapter 02, returning to the catalog worked, and no console errors were reported.
+- The reader now lazy-loads the full migrated chapter bundle only when a learner starts a chapter, keeping the homepage bundle smaller.
+- Full migration check: 35 chapter records, 67 local images, 7 embedded Feishu sheets converted to web tables, and 1 embedded MP4 downloaded locally. No migrated image path is missing.
+- Progress and case favorites now persist in local storage across refreshes; opening the course resumes at the first unfinished chapter.
 
 ## Implementation Checklist
 

@@ -216,6 +216,34 @@ h1 em { color: var(--orange); font-style: normal; }
 .course-reader-aside p { margin-bottom: 20px; color: #755f53; font-size: 14px; line-height: 1.8; }
 .course-reader-aside-meta { display: grid; gap: 8px; padding-top: 15px; border-top: 1px solid #f2c8b0; color: var(--deep-orange); font-size: 11px; font-weight: 800; }
 .course-reader-main { padding: 5px 5px 0 0; }
+.course-reader-loading { display: grid; min-height: 300px; place-items: center; padding: 30px; border: 1px dashed #edc4ae; border-radius: 13px; background: #fffaf7; color: var(--muted); font-size: 13px; text-align: center; }
+.course-reader-loading.error { color: #a84a2d; border-color: #e7a78a; background: #fff1eb; }
+.course-reader-source-note { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 18px; padding-bottom: 11px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.course-reader-source-note span:first-child { color: var(--deep-orange); font-weight: 900; }
+.course-markdown { color: #3f3732; font-size: 13px; line-height: 1.85; }
+.course-markdown h1 { margin: 0 0 18px; font-size: 30px; line-height: 1.2; letter-spacing: -.06em; }
+.course-markdown h2 { margin: 30px 0 11px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 20px; line-height: 1.35; letter-spacing: -.04em; }
+.course-markdown h3 { margin: 24px 0 9px; font-size: 16px; line-height: 1.45; }
+.course-markdown h4 { margin: 20px 0 7px; font-size: 14px; }
+.course-markdown p { margin: 0 0 14px; }
+.course-markdown strong { color: #2f2925; }
+.course-markdown ul, .course-markdown ol { display: grid; gap: 6px; margin: 0 0 16px; padding-left: 22px; }
+.course-markdown li { padding-left: 3px; }
+.course-markdown blockquote { margin: 16px 0; padding: 12px 15px; border-left: 3px solid var(--orange); background: #fff4ed; color: #755f53; }
+.course-markdown pre { overflow-x: auto; margin: 16px 0; padding: 15px; border: 1px solid #eadbd2; border-radius: 10px; background: #292421; color: #fff7f1; font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+.course-markdown code { padding: 2px 5px; border-radius: 4px; background: #f7ebe4; color: #9d3d20; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.course-markdown pre code { padding: 0; background: transparent; color: inherit; }
+.course-markdown table { display: block; overflow-x: auto; width: 100%; margin: 17px 0 20px; border-collapse: collapse; font-size: 11px; line-height: 1.55; }
+.course-markdown thead, .course-markdown tbody { min-width: 520px; }
+.course-markdown th, .course-markdown td { min-width: 110px; padding: 9px 10px; border: 1px solid #e4d7cf; text-align: left; vertical-align: top; }
+.course-markdown th { background: #f6eae3; color: #5c4437; font-weight: 900; }
+.course-markdown tr:nth-child(even) td { background: #fffaf7; }
+.course-markdown img { display: block; max-width: 100%; height: auto; margin: 17px auto; border: 1px solid #eadbd2; border-radius: 9px; box-shadow: 0 8px 20px rgba(100,70,50,.06); }
+.course-markdown video { display: block; width: 100%; max-height: 480px; margin: 17px auto; border: 1px solid #eadbd2; border-radius: 9px; background: #211d1a; }
+.course-markdown a { color: var(--deep-orange); text-decoration: underline; text-decoration-color: #f3c0a5; text-underline-offset: 3px; }
+.course-markdown hr { margin: 24px 0; border: 0; border-top: 1px solid var(--line); }
+.course-markdown sheet, .course-markdown source { display: none; }
+.course-reader-practice { margin-top: 28px; padding-top: 21px; border-top: 2px solid #f2c2a5; }
 .course-reader-main h3 { margin: 9px 0 10px; font-size: 25px; letter-spacing: -.05em; }
 .course-reader-lede { max-width: 530px; margin-bottom: 24px !important; color: var(--muted) !important; font-size: 13px !important; line-height: 1.75 !important; }
 .course-reader-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -310,6 +338,11 @@ h1 em { color: var(--orange); font-style: normal; }
   .course-reader-aside { padding: 19px; }
   .course-reader-aside h2 { font-size: 26px; }
   .course-reader-grid { grid-template-columns: 1fr; }
+  .course-reader-source-note { justify-content: start; }
+  .course-markdown { font-size: 13px; }
+  .course-markdown h1 { font-size: 25px; }
+  .course-markdown h2 { font-size: 18px; }
+  .course-markdown img { max-width: 100%; }
   .course-reader-footer { flex-wrap: wrap; padding: 15px 18px 18px; }
   .course-reader-footer .course-reader-complete { order: -1; width: 100%; justify-content: center; }
 }
