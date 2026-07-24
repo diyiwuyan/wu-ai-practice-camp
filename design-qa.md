@@ -56,7 +56,8 @@ The revised implementation reduces the initial hero height and image scale so th
 
 - Navigation labels were increased to 16px on desktop and kept at 14px for narrower layouts, preserving the compact mobile header.
 - The free WorkBuddy course now has a real catalog modal with grouped chapters, learning time, difficulty, chapter introductions, exercises, and expected outputs.
-- Browser check: the free-course card opened successfully, the chapter list contained 27 entries, chapter 27 switched the detail panel, the modal closed successfully, and no console errors were reported.
+- “开始跟做这门课” now opens a persistent lesson reader instead of closing the modal and returning to the homepage. The reader supports returning to the catalog, previous/next chapter navigation, marking the current chapter complete, and showing course progress.
+- Browser check: the reader opened at chapter 01, marking it complete changed the action state and progress, next chapter opened chapter 02, returning to the catalog worked, and no console errors were reported.
 
 ## Implementation Checklist
 
@@ -70,6 +71,8 @@ The revised implementation reduces the initial hero height and image scale so th
 ## Follow-up Polish
 
 - Add real course detail pages and authenticated progress persistence.
+- Expand the lesson reader with the full chapter body, original images, tables, prompts, and downloadable materials from the free course.
+- Add real routes and backend persistence for paid enrollment, case submissions, Skill details, knowledge pages, comments, and learner progress.
 - Connect case, Skill, knowledge, and contribution content to a CMS or database.
 - Add the final brand font and replace placeholder community metrics with live data.
 
