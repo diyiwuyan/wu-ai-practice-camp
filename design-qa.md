@@ -48,9 +48,15 @@ The revised implementation reduces the initial hero height and image scale so th
 - Search `发票`: filters to the invoice case and leaves one matching heading visible.
 - `立即发布案例`: opens the contribution dialog; `关闭` returns to the page.
 - `查看` on a case: opens the case detail dialog; `关闭` returns to the page.
-- `WorkBuddy 免费实战课`: opens the course dialog; `关闭` returns to the page.
+- `WorkBuddy 免费实战课`: opens the course dialog, exposes all 27 chapter entries across four parts, supports chapter selection, and `关闭` returns to the page.
 - Browser console error check: no error-level entries returned.
 - Production checks: `npm run build` and `npm run test:sites` both passed.
+
+## Latest revision
+
+- Navigation labels were increased to 16px on desktop and kept at 14px for narrower layouts, preserving the compact mobile header.
+- The free WorkBuddy course now has a real catalog modal with grouped chapters, learning time, difficulty, chapter introductions, exercises, and expected outputs.
+- Browser check: the free-course card opened successfully, the chapter list contained 27 entries, chapter 27 switched the detail panel, the modal closed successfully, and no console errors were reported.
 
 ## Implementation Checklist
 
