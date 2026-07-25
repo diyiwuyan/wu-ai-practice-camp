@@ -207,7 +207,7 @@ async function handleApi(request, env, url) {
     if (!debit.meta?.changes) return json({ message: "积分不足，请刷新账户后重试" }, 400);
     try {
       await env.DB.batch([
-        env.DB.prepare("INSERT OR IGNORE INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), user.id, courseId, "points", now),
+        env.DB.prepare("INSERT INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), user.id, courseId, "points", now),
         env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'course_unlock', ?, ?, ?)").bind(crypto.randomUUID(), user.id, -price, courseId, `解锁课程：${courseId}`, now),
       ]);
     } catch (error) {
