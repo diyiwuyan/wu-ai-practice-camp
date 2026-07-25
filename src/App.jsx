@@ -20,7 +20,8 @@ import {
 } from '@phosphor-icons/react'
 import { freeCourseGroups, freeCourseStats } from './courseContent'
 import { hydrateCourseEmbeds } from './courseEmbeds'
-import { imageCourseGroups, imageCoursePrompts, imageCourseStats } from './imageCourseContent'
+import { careerCourseGroups, careerCoursePrompts, careerCourseStats } from './careerCourseContent'
+import { imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptRules } from './imageCourseContent'
 import { createSubmission, getAdminDashboard, getSession, isDemoAuth, logout, requestAuthCode, reviewSubmission, verifyAuthCode } from './community'
 
 const cases = [
@@ -64,6 +65,44 @@ const skills = [
   { icon: FileText, name: '用 AI 做数据分析', detail: '从数据到洞察的实用流程', count: '9863 人学习' },
   { icon: Sparkle, name: '自动化工作流搭建', detail: '把重复工作交给 AI 和自动化', count: '8731 人学习' },
 ]
+
+const paidCourses = {
+  codex: {
+    title: 'Codex 橙皮书',
+    description: '从 0 到 1 掌握 AI 编程思维、代码协作和可交付的软件工作流。',
+    audience: 'AI 编程入门', duration: '建议 6 周', status: '付费课程',
+    price: { original: 199, sale: 49.9 },
+    lessonPrices: {},
+    outputs: ['一套可复用的 Codex 工作流', '从需求到交付的项目练习', '代码审查与迭代检查表'],
+    syllabus: ['任务拆解与上下文准备', '从原型到可运行产品', '调试、验证与发布'],
+    chapters: ['需求拆解与工作区准备', '从原型到可运行页面', '读代码、改代码与调试', '测试、验收与版本迭代', '部署上线与项目复盘'],
+    cta: '报名并查看优惠价',
+  },
+  image: {
+    title: 'AI 生图工作流训练营',
+    description: '从平台和模型选型，到提示词规范、行业案例、系列素材和交付验收，练出一套可复用的视觉生产方法。',
+    audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '付费课程',
+    price: { original: 199, sale: 49.9 },
+    lessonPrices: {},
+    outputs: ['一套生图提示词规范', '30+ 个行业提示词模板', '电商、内容、课程海报作品集'],
+    syllabus: ['平台与模型选择', '提示词十段式与迭代规范', '行业案例与系列组图', '作品集和商业交付'],
+    chapters: imageCourseGroups.flatMap((group) => group.chapters.map((chapter) => chapter.title)),
+    cta: '报名并查看优惠价',
+  },
+  career: {
+    title: '大学生求职 AI 课',
+    description: '把 AI 用到求职全流程：方向梳理、岗位研究、简历优化、作品集、投递、面试和 Offer 决策。',
+    audience: '大学生、应届生和转行初学者', duration: '建议 3 周', status: '付费课程',
+    stats: careerCourseStats,
+    price: { original: 199, sale: 49.9 },
+    lessonPrices: {},
+    outputs: ['一份岗位定制简历', '一套求职证据库和作品集', '投递跟踪表、面试回答卡和复盘报告'],
+    syllabus: ['岗位定位与 JD 拆解', '简历、项目和作品集', '投递策略与面试模拟', 'Offer 比较与入职准备'],
+    chapters: careerCourseGroups.flatMap((group) => group.chapters.map((chapter) => chapter.title)),
+    prompts: careerCoursePrompts,
+    cta: '报名并查看优惠价',
+  },
+}
 
 function CourseModal({ selectedChapter, onSelect, onStart }) {
   const [keyword, setKeyword] = useState('')
@@ -112,7 +151,19 @@ function CourseModal({ selectedChapter, onSelect, onStart }) {
   )
 }
 
+function EnrollmentOffer({ course, onNotify }) {
+  const [open, setOpen] = useState(false)
+  const price = course.price || { original: 199, sale: 49.9 }
+  if (!open) return <button className="button button-primary full" onClick={() => { setOpen(true); onNotify('报名信息已展开，请添加武同学并回复“课程”') }}>{course.cta || '报名学习'} <ArrowRight size={17} /></button>
+  return <section className="enrollment-offer"><div className="enrollment-price"><span>单节课</span><del>原价 ¥{price.original}</del><strong>¥{price.sale}</strong><small>优惠价 · 后续每节课可单独配置价格</small></div><div className="enrollment-contact"><img src="assets/contact-personal-qr.jpg" alt="武同学个人二维码" /><div><b>报名方式</b><p>扫码添加武同学，回复“课程”，发送你想报名的课程名称。</p><small>课程价格以后可以按章节分别调整，当前默认每节原价 199 元、优惠价 49.9 元。</small></div></div></section>
+}
+
+function lessonPrice(course, title) {
+  return course.lessonPrices?.[title] || course.price || { original: 199, sale: 49.9 }
+}
+
 function PaidCourseModal({ course, onClose, onNotify }) {
+  const [selectedPrompt, setSelectedPrompt] = useState(course.prompts?.[0] || null)
   return (
     <div className="paid-course-content">
       <span className="modal-icon"><Sparkle size={26} /></span>
@@ -120,11 +171,14 @@ function PaidCourseModal({ course, onClose, onNotify }) {
       <h2>{course.title}</h2>
       <p>{course.description}</p>
       <div className="modal-course-meta"><span>{course.audience}</span><span>{course.duration}</span><span>{course.status}</span></div>
+      {course.stats && <div className="course-modal-stats paid-course-stats">{course.stats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>}
       <div className="paid-course-grid">
         <section><b>你会拿到什么</b><ul>{course.outputs.map((item) => <li key={item}>{item}</li>)}</ul></section>
         <section><b>课程重点</b><ul>{course.syllabus.map((item) => <li key={item}>{item}</li>)}</ul></section>
       </div>
-      <button className="button button-primary full" onClick={() => { onClose(); onNotify(`已记录：${course.title}，开放后会提醒你`) }}>{course.cta} <ArrowRight size={17} /></button>
+      {course.chapters?.length > 0 && <section className="paid-chapter-outline"><b>课程目录</b><ol>{course.chapters.map((item, index) => { const price = lessonPrice(course, item); return <li key={item}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item}</strong><small>本节原价 ¥{price.original} · 优惠价 ¥{price.sale}</small></div></li> })}</ol></section>}
+      {selectedPrompt && <div className="prompt-library paid-course-prompts"><div className="prompt-library-heading"><b>课程可复制 Prompt</b><select value={selectedPrompt.label} onChange={(event) => setSelectedPrompt(course.prompts.find((item) => item.label === event.target.value) || course.prompts[0])}>{course.prompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{selectedPrompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(selectedPrompt.prompt); onNotify('课程 Prompt 已复制') }}>复制 Prompt <ArrowRight size={15} /></button></div>}
+      <EnrollmentOffer course={course} onNotify={onNotify} />
     </div>
   )
 }
@@ -159,7 +213,10 @@ function ImageCourseModal({ onNotify }) {
             <code>{prompt.prompt}</code>
             <button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('提示词模板已复制') }}>复制模板 <ArrowRight size={15} /></button>
           </div>
+          <section className="prompt-rules"><b>提示词规范</b><div>{imagePromptRules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section>
+          <section className="image-example-section"><div className="prompt-library-heading"><b>示例图：同一套规范如何落地</b><small>先看用途，再看画面结构</small></div><div className="image-example-grid">{imageCourseExamples.map((example) => <article key={example.title}><img src={example.image} alt={example.title} /><span>{example.type}</span><b>{example.title}</b><p>{example.takeaway}</p><button className="text-link" onClick={() => { navigator.clipboard?.writeText(example.prompt); onNotify('示例提示词已复制') }}>复制示例提示词 <ArrowRight size={15} /></button></article>)}</div></section>
           <div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下过程稿、提示词和验收记录，最后组成自己的作品集。</div>
+          <EnrollmentOffer course={paidCourses.image} onNotify={onNotify} />
         </article>
       </div>
     </div>
@@ -455,9 +512,9 @@ export function App() {
           <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，付费课程带你完成更完整的结果。</p></div>
           <div className="learning-cards">
             <button className="learning-card featured" onClick={openCourse}><span className="course-label">免费课程</span><h3>WorkBuddy 免费实战课</h3><p>35 章完整内容，带你从安装、任务、Skill、实战案例到自己的 AI 工作系统</p><div className="progress"><span style={{ width: `${Math.max(8, Math.round((completedChapters.length / allChapters.length) * 100))}%` }} /></div><small>{completedChapters.length ? `已完成 ${completedChapters.length}/${allChapters.length} 章 · 继续学习` : '查看完整目录，开始第一章'} <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: 'Codex 橙皮书', description: '从 0 到 1 掌握 AI 编程思维、代码协作和可交付的软件工作流。适合想把 AI 从聊天工具用成编程搭档的同学。', audience: 'AI 编程入门', duration: '建议 6 周', status: '付费课程模块', outputs: ['一套可复用的 Codex 工作流', '从需求到交付的项目练习', '代码审查与迭代检查表'], syllabus: ['任务拆解与上下文准备', '从原型到可运行产品', '调试、验证与发布'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>Codex 橙皮书</h3><p>从 0 到 1 掌握 AI 编程思维与实战方法</p><small>了解课程 <ArrowRight size={16} /></small></button>
+            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: paidCourses.codex })}><span className="course-label paid">付费进阶</span><h3>Codex 橙皮书</h3><p>从 0 到 1 掌握 AI 编程思维与实战方法</p><small>查看目录与报名 <ArrowRight size={16} /></small></button>
             <button className="learning-card" onClick={() => setModal('image-course')}><span className="course-label paid">付费进阶</span><h3>AI 生图工作流训练营</h3><p>平台、模型、提示词与行业案例，练出可交付的视觉生产力</p><small>查看课程大纲 <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: '大学生求职 AI 课', description: '把 AI 用到求职全流程：方向梳理、简历优化、岗位研究、面试准备和作品集表达，帮助你把准备工作做得更具体。', audience: '大学生与应届生', duration: '建议 3 周', status: '付费课程模块', outputs: ['一份岗位匹配简历', '一套面试问答与复盘卡', '一份可展示的求职作品集'], syllabus: ['目标岗位与优势定位', '简历、作品集和投递策略', '面试模拟与复盘迭代'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>大学生求职 AI 课</h3><p>用 AI 完成从定位、简历到面试的求职闭环</p><small>了解课程 <ArrowRight size={16} /></small></button>
+            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: paidCourses.career })}><span className="course-label paid">付费进阶</span><h3>大学生求职 AI 课</h3><p>用 AI 完成从定位、简历到面试的求职闭环</p><small>查看目录与报名 <ArrowRight size={16} /></small></button>
           </div>
         </section>
 
