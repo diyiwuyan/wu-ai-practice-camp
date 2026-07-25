@@ -23,6 +23,7 @@ import { hydrateCourseEmbeds } from './courseEmbeds'
 import { careerCourseGroups, careerCoursePrompts, careerCourseStats } from './careerCourseContent'
 import { imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptRules } from './imageCourseContent'
 import { createSubmission, getAdminDashboard, getSession, grantCourse, isDemoAuth, logout, requestAuthCode, reviewSubmission, verifyAuthCode } from './community'
+import { skillCatalog, skillCategories } from './skillCatalog'
 
 const cases = [
   {
@@ -60,11 +61,7 @@ const cases = [
   },
 ]
 
-const skills = [
-  { id: 'prompt', icon: SquaresFour, name: '提示词工程：让 AI 听懂你', detail: '写出高质量提示词的底层方法', count: '1.2w 人学习', audience: '所有刚开始用 AI 的人', benefit: '把模糊想法变成 AI 能执行的任务', steps: ['先说清任务目标和交付格式', '补充背景、素材、限制和验收标准', '让 AI 先给方案，再执行和复盘'], prompt: '请先复述我的目标和交付格式，再列出你需要的背景信息。信息不足时先提问，不要直接猜测；完成后给出结果、依据和下一步建议。' },
-  { id: 'data', icon: FileText, name: '用 AI 做数据分析', detail: '从数据到洞察的实用流程', count: '9863 人学习', audience: '需要处理表格、报表和经营数据的人', benefit: '从一张表得到可解释、可行动的结论', steps: ['先检查字段、口径和缺失值', '按问题拆解指标和对比维度', '输出结论、证据、风险和下一步动作'], prompt: '请先检查这份数据的字段、口径、缺失值和异常值，再围绕【业务问题】输出分析过程、关键结论、证据表和可执行建议。不要编造数据。' },
-  { id: 'workflow', icon: Sparkle, name: '自动化工作流搭建', detail: '把重复工作交给 AI 和自动化', count: '8731 人学习', audience: '每天重复处理文件、信息和通知的人', benefit: '把重复任务拆成可复用、可验收的工作流', steps: ['画出输入、处理、判断和输出', '先用小样本验证每一步', '设置人工确认点和失败兜底'], prompt: '请把【重复任务】拆成输入、处理、判断、输出和人工确认五个环节，先给出最小可行工作流，再列出失败情况、验收标准和可复用模板。' },
-]
+const skills = skillCatalog
 
 const paidCourses = {
   codex: {
@@ -167,21 +164,32 @@ function SkillDetailModal({ skill, onNotify }) {
   const Icon = skill.icon
   return <div className="skill-detail-content">
     <span className="modal-icon"><Icon size={26} weight="duotone" /></span>
-    <p className="eyebrow orange"><span /> Skill 使用卡</p>
-    <h2>{skill.name}</h2>
+    <p className="eyebrow orange"><span /> 可安装 Skill</p>
+    <h2>{skill.title || skill.name}</h2>
+    <div className="skill-detail-name">{skill.name} · {skill.category}</div>
     <p>{skill.detail}</p>
-    <div className="skill-detail-meta"><span>适合：{skill.audience}</span><span>{skill.count}</span></div>
+    <div className="skill-detail-meta"><span>适合：{skill.audience}</span><span>{skill.rank}</span><span>安装量：{skill.installs}</span><span>{skill.source}</span></div>
     <div className="skill-benefit"><b>它能帮你</b><strong>{skill.benefit}</strong></div>
     <section className="skill-steps"><b>使用方法</b><ol>{skill.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, '0')}</span>{step}</li>)}</ol></section>
-    <section className="skill-prompt"><div className="prompt-library-heading"><b>可直接复制的起手式</b><button className="text-link" onClick={() => { navigator.clipboard?.writeText(skill.prompt); onNotify('Skill 起手式已复制') }}>复制模板 <ArrowRight size={15} /></button></div><code>{skill.prompt}</code></section>
-    <button className="button button-primary full" onClick={() => { navigator.clipboard?.writeText(skill.prompt); onNotify('已复制起手式，打开 WorkBuddy 试一遍') }}>立即使用这个 Skill <ArrowRight size={17} /></button>
+    <section className="skill-install"><div className="prompt-library-heading"><b>安装命令</b><button className="text-link" onClick={() => { navigator.clipboard?.writeText(skill.installCommand); onNotify('安装命令已复制') }}>复制命令 <ArrowRight size={15} /></button></div><code>{skill.installCommand}</code><small className="skill-security">安全提示：{skill.audit}</small></section>
+    <div className="skill-detail-links"><a className="button button-outline" href={skill.marketUrl} target="_blank" rel="noreferrer">打开 Skill 详情</a><a className="button button-primary" href={skill.repoUrl} target="_blank" rel="noreferrer">查看 GitHub 仓库 <ArrowRight size={17} /></a></div>
   </div>
 }
 
 function SkillGalleryModal({ items, onSelect }) {
+  const [category, setCategory] = useState('全部')
+  const [recommendIndex, setRecommendIndex] = useState(0)
+  const filteredItems = category === '全部' ? items : items.filter((skill) => skill.category === category)
+  useEffect(() => {
+    const timer = window.setInterval(() => setRecommendIndex((index) => (index + 1) % items.length), 4200)
+    return () => window.clearInterval(timer)
+  }, [items.length])
+  const recommended = items[recommendIndex]
   return <div className="skill-gallery-content">
-    <div className="course-modal-heading"><div><span className="modal-icon"><SquaresFour size={26} /></span><p className="eyebrow orange"><span /> Skill 广场</p><h2>找到一个马上能用的 Skill</h2><p>先按任务挑一个，复制起手式，再换成你的真实材料。后续可以继续接入学员贡献的 Skill。</p></div><div className="course-modal-stats"><span><strong>{items.length}</strong><small>本周精选</small></span><span><strong>可复制</strong><small>起手式</small></span></div></div>
-    <div className="skill-gallery-grid">{items.map((skill) => { const Icon = skill.icon; return <button className="skill-gallery-card" key={skill.id} onClick={() => onSelect(skill)}><span className="skill-icon"><Icon size={22} weight="duotone" /></span><b>{skill.name}</b><p>{skill.detail}</p><strong>学完你会：{skill.benefit}</strong><small>查看使用卡 <ArrowRight size={15} /></small></button> })}</div>
+    <div className="course-modal-heading"><div><span className="modal-icon"><SquaresFour size={26} /></span><p className="eyebrow orange"><span /> Skill 广场</p><h2>找到一个真正能安装的 Skill</h2><p>这里展示来自 skills.sh 榜单、官方仓库和高质量社区仓库的真实 Skill。每个条目都有安装命令、仓库、用途和安全提示。</p></div><div className="course-modal-stats"><span><strong>{items.length}</strong><small>已整理 Skill</small></span><span><strong>滚动推荐</strong><small>榜单更新</small></span></div></div>
+    <div className="skill-recommendation"><span className="skill-recommendation-label">正在推荐</span><b>{recommended.title || recommended.name}</b><small>{recommended.rank} · {recommended.installs} 安装</small><button className="text-link" onClick={() => onSelect(recommended)}>查看并安装 <ArrowRight size={15} /></button></div>
+    <div className="skill-gallery-filter">{skillCategories.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
+    <div className="skill-gallery-grid">{filteredItems.map((skill) => { const Icon = skill.icon; return <button className="skill-gallery-card" key={skill.id} onClick={() => onSelect(skill)}><div className="skill-card-topline"><span className="skill-icon"><Icon size={22} weight="duotone" /></span><small>{skill.category}</small></div><b>{skill.title || skill.name}</b><code>{skill.name}</code><p>{skill.detail}</p><strong>{skill.rank} · {skill.installs} 安装</strong><small className="skill-card-source">{skill.source} · 查看安装详情 <ArrowRight size={15} /></small></button> })}</div>
   </div>
 }
 
@@ -424,7 +432,7 @@ export function App() {
     window.setTimeout(() => setToast(''), 2200)
   }
 
-  const hasCourseAccess = (courseId) => unlockedCourses.includes(courseId) || session?.unlockedCourses?.includes(courseId)
+  const hasCourseAccess = (courseId) => session?.role === 'admin' || unlockedCourses.includes(courseId) || session?.unlockedCourses?.includes(courseId)
 
   const toggleSave = (id) => {
     setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
@@ -568,7 +576,7 @@ export function App() {
             <aside className="side-stack">
               <section className="side-card" id="skills">
                 <div className="side-heading"><h3>Skill 本周推荐</h3><button className="text-link" onClick={() => setModal('skills')}>Skill 广场 <ArrowRight size={15} /></button></div>
-                <div className="skill-list">{skills.map((skill) => { const Icon = skill.icon; return <button className="skill-item" key={skill.id} onClick={() => setModal({ kind: 'skill', skill })}><span className="skill-icon"><Icon size={20} weight="duotone" /></span><span><b>{skill.name}</b><small>{skill.detail}</small></span><em>{skill.count}</em></button> })}</div>
+                <div className="skill-list">{skills.slice(0, 3).map((skill) => { const Icon = skill.icon; return <button className="skill-item" key={skill.id} onClick={() => setModal({ kind: 'skill', skill })}><span className="skill-icon"><Icon size={20} weight="duotone" /></span><span><b>{skill.title || skill.name}</b><small>{skill.detail}</small></span><em>{skill.installs}</em></button> })}</div>
               </section>
               <section className="side-card contribution-card" id="community">
                 <div className="side-heading"><h3>学员贡献</h3><UsersThree size={21} weight="duotone" /></div>
