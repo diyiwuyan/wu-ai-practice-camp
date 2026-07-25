@@ -102,7 +102,9 @@ async function handleApi(request, env, url) {
     }
     await env.DB.prepare("DELETE FROM otp_codes WHERE email = ?").bind(email).run();
     const id = crypto.randomUUID();
-    await env.DB.prepare("INSERT INTO users (id, email, name, role, status, created_at) VALUES (?, ?, ?, 'learner', 'active', ?) ON CONFLICT(email) DO UPDATE SET name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE users.name END").bind(id, email, name || email.split("@")[0], isoNow()).run();
+    const adminEmail = String(env.ADMIN_EMAIL || "").trim().toLowerCase();
+    const role = adminEmail && email === adminEmail ? "admin" : "learner";
+    await env.DB.prepare("INSERT INTO users (id, email, name, role, status, created_at) VALUES (?, ?, ?, ?, 'active', ?) ON CONFLICT(email) DO UPDATE SET name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE users.name END, role = CASE WHEN excluded.role = 'admin' THEN 'admin' ELSE users.role END").bind(id, email, name || email.split("@")[0], role, isoNow()).run();
     const user = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users WHERE email = ?").bind(email).first();
     const sessionToken = randomToken();
     await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(await sha256(sessionToken), user.id, Date.now() + SESSION_DAYS * 86400 * 1000, isoNow()).run();

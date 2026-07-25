@@ -57,7 +57,7 @@ export async function verifyAuthCode(email, code, name = '') {
     if (!saved || saved.email !== email || saved.code !== code || saved.expiresAt < Date.now()) throw new Error('验证码错误或已过期')
     const users = readJson(STORAGE.users, [])
     const existing = users.find((item) => item.email === email)
-    const user = existing || { id: 'demo-' + Date.now(), email, name: name || email.split('@')[0], role: email === 'admin@wu-ai.test' ? 'admin' : 'learner', createdAt: new Date().toISOString() }
+    const user = existing || { id: 'demo-' + Date.now(), email, name: name || email.split('@')[0], role: email === 'diyiwuyan@163.com' ? 'admin' : 'learner', createdAt: new Date().toISOString() }
     writeJson(STORAGE.users, [...users.filter((item) => item.email !== email), user])
     writeJson(STORAGE.session, user)
     return { user, demo: true }

@@ -17,19 +17,22 @@ wrangler d1 execute wu-ai-practice-camp-db --remote --file=worker/schema.sql
 
 - `RESEND_API_KEY`：Resend API Key，建议使用加密 Secret。
 - `MAIL_FROM`：已经在 Resend 验证过的发件人，例如 `武同学AI实践营 <hello@example.com>`。
+- `ADMIN_EMAIL`：管理员邮箱，设置为 `diyiwuyan@163.com` 后，该邮箱完成验证码登录会自动获得管理员权限。
 - `ENVIRONMENT=production`：生产环境不要返回错误细节。
 
 没有配置邮箱服务时，前端会明确提示“邮箱服务尚未配置”，不会假装登录成功。
 
 ## 3. 设置管理员
 
-先用目标邮箱完成一次登录，再执行：
+推荐配置 `ADMIN_EMAIL=diyiwuyan@163.com`。如果不使用自动授予，也可以先用目标邮箱完成一次登录，再执行：
 
 ```sql
 UPDATE users SET role = 'admin' WHERE email = '你的管理员邮箱';
 ```
 
 管理员重新登录后，前端顶部会出现“管理后台”，可以查看用户、查看投稿并通过或退回投稿。
+
+当前登录方式是邮箱验证码，不保存密码；不要把个人密码写入 Worker 变量、代码或仓库。
 
 ## 4. 投稿素材
 
