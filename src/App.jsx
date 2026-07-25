@@ -61,9 +61,9 @@ const cases = [
 ]
 
 const skills = [
-  { icon: SquaresFour, name: '提示词工程：让 AI 听懂你', detail: '写出高质量提示词的底层方法', count: '1.2w 人学习' },
-  { icon: FileText, name: '用 AI 做数据分析', detail: '从数据到洞察的实用流程', count: '9863 人学习' },
-  { icon: Sparkle, name: '自动化工作流搭建', detail: '把重复工作交给 AI 和自动化', count: '8731 人学习' },
+  { id: 'prompt', icon: SquaresFour, name: '提示词工程：让 AI 听懂你', detail: '写出高质量提示词的底层方法', count: '1.2w 人学习', audience: '所有刚开始用 AI 的人', benefit: '把模糊想法变成 AI 能执行的任务', steps: ['先说清任务目标和交付格式', '补充背景、素材、限制和验收标准', '让 AI 先给方案，再执行和复盘'], prompt: '请先复述我的目标和交付格式，再列出你需要的背景信息。信息不足时先提问，不要直接猜测；完成后给出结果、依据和下一步建议。' },
+  { id: 'data', icon: FileText, name: '用 AI 做数据分析', detail: '从数据到洞察的实用流程', count: '9863 人学习', audience: '需要处理表格、报表和经营数据的人', benefit: '从一张表得到可解释、可行动的结论', steps: ['先检查字段、口径和缺失值', '按问题拆解指标和对比维度', '输出结论、证据、风险和下一步动作'], prompt: '请先检查这份数据的字段、口径、缺失值和异常值，再围绕【业务问题】输出分析过程、关键结论、证据表和可执行建议。不要编造数据。' },
+  { id: 'workflow', icon: Sparkle, name: '自动化工作流搭建', detail: '把重复工作交给 AI 和自动化', count: '8731 人学习', audience: '每天重复处理文件、信息和通知的人', benefit: '把重复任务拆成可复用、可验收的工作流', steps: ['画出输入、处理、判断和输出', '先用小样本验证每一步', '设置人工确认点和失败兜底'], prompt: '请把【重复任务】拆成输入、处理、判断、输出和人工确认五个环节，先给出最小可行工作流，再列出失败情况、验收标准和可复用模板。' },
 ]
 
 const paidCourses = {
@@ -71,7 +71,7 @@ const paidCourses = {
     id: 'codex',
     title: 'Codex 橙皮书',
     description: '从 0 到 1 掌握 AI 编程思维、代码协作和可交付的软件工作流。',
-    audience: 'AI 编程入门', duration: '建议 6 周', status: '付费课程',
+    audience: 'AI 编程入门', duration: '建议 6 周', status: '付费课程', label: '付费进阶', cover: 'assets/course-cover-codex.png', benefit: '把一个想法做成可运行、可验证、可发布的产品',
     price: { original: 199, sale: 49.9 },
     outputs: ['一套可复用的 Codex 工作流', '从需求到交付的项目练习', '代码审查与迭代检查表'],
     syllabus: ['任务拆解与上下文准备', '从原型到可运行产品', '调试、验证与发布'],
@@ -82,7 +82,7 @@ const paidCourses = {
     id: 'image',
     title: 'AI 生图工作流训练营',
     description: '从平台和模型选型，到提示词规范、行业案例、系列素材和交付验收，练出一套可复用的视觉生产方法。',
-    audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '付费课程',
+    audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '付费课程', label: '付费进阶', cover: 'assets/image-example-course-poster.png', benefit: '独立完成一套可发布、可复用的视觉素材',
     price: { original: 199, sale: 49.9 },
     outputs: ['一套生图提示词规范', '30+ 个行业提示词模板', '电商、内容、课程海报作品集'],
     syllabus: ['平台与模型选择', '提示词十段式与迭代规范', '行业案例与系列组图', '作品集和商业交付'],
@@ -93,7 +93,7 @@ const paidCourses = {
     id: 'career',
     title: '大学生求职 AI 课',
     description: '把 AI 用到求职全流程：方向梳理、岗位研究、简历优化、作品集、投递、面试和 Offer 决策。',
-    audience: '大学生、应届生和转行初学者', duration: '建议 3 周', status: '付费课程',
+    audience: '大学生、应届生和转行初学者', duration: '建议 3 周', status: '付费课程', label: '付费进阶', cover: 'assets/course-cover-career.png', benefit: '拿到一套真实、可投递、可复盘的求职材料',
     stats: careerCourseStats,
     price: { original: 199, sale: 49.9 },
     outputs: ['一份岗位定制简历', '一套求职证据库和作品集', '投递跟踪表、面试回答卡和复盘报告'],
@@ -102,6 +102,19 @@ const paidCourses = {
     cta: '报名并查看优惠价',
   },
 }
+
+const freeCourse = {
+  id: 'free',
+  kind: 'free',
+  title: 'WorkBuddy 免费实战课',
+  label: '免费完整课',
+  cover: 'assets/course-cover-workbuddy.png',
+  benefit: '从安装开始，完成第一个真实任务并搭出自己的 AI 工作系统',
+  description: '35 章、17 个实战案例、40+ 个可复制 Prompt，适合第一次把 AI 用进工作的同学。',
+  stats: '35 章 · 17 个案例 · 40+ Prompt',
+}
+
+const courseCatalog = [freeCourse, paidCourses.image, paidCourses.career, paidCourses.codex]
 
 function CourseModal({ selectedChapter, onSelect, onStart }) {
   const [keyword, setKeyword] = useState('')
@@ -150,6 +163,50 @@ function CourseModal({ selectedChapter, onSelect, onStart }) {
   )
 }
 
+function SkillDetailModal({ skill, onNotify }) {
+  const Icon = skill.icon
+  return <div className="skill-detail-content">
+    <span className="modal-icon"><Icon size={26} weight="duotone" /></span>
+    <p className="eyebrow orange"><span /> Skill 使用卡</p>
+    <h2>{skill.name}</h2>
+    <p>{skill.detail}</p>
+    <div className="skill-detail-meta"><span>适合：{skill.audience}</span><span>{skill.count}</span></div>
+    <div className="skill-benefit"><b>它能帮你</b><strong>{skill.benefit}</strong></div>
+    <section className="skill-steps"><b>使用方法</b><ol>{skill.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, '0')}</span>{step}</li>)}</ol></section>
+    <section className="skill-prompt"><div className="prompt-library-heading"><b>可直接复制的起手式</b><button className="text-link" onClick={() => { navigator.clipboard?.writeText(skill.prompt); onNotify('Skill 起手式已复制') }}>复制模板 <ArrowRight size={15} /></button></div><code>{skill.prompt}</code></section>
+    <button className="button button-primary full" onClick={() => { navigator.clipboard?.writeText(skill.prompt); onNotify('已复制起手式，打开 WorkBuddy 试一遍') }}>立即使用这个 Skill <ArrowRight size={17} /></button>
+  </div>
+}
+
+function SkillGalleryModal({ items, onSelect }) {
+  return <div className="skill-gallery-content">
+    <div className="course-modal-heading"><div><span className="modal-icon"><SquaresFour size={26} /></span><p className="eyebrow orange"><span /> Skill 广场</p><h2>找到一个马上能用的 Skill</h2><p>先按任务挑一个，复制起手式，再换成你的真实材料。后续可以继续接入学员贡献的 Skill。</p></div><div className="course-modal-stats"><span><strong>{items.length}</strong><small>本周精选</small></span><span><strong>可复制</strong><small>起手式</small></span></div></div>
+    <div className="skill-gallery-grid">{items.map((skill) => { const Icon = skill.icon; return <button className="skill-gallery-card" key={skill.id} onClick={() => onSelect(skill)}><span className="skill-icon"><Icon size={22} weight="duotone" /></span><b>{skill.name}</b><p>{skill.detail}</p><strong>学完你会：{skill.benefit}</strong><small>查看使用卡 <ArrowRight size={15} /></small></button> })}</div>
+  </div>
+}
+
+function CourseCard({ course, featured = false, onOpen }) {
+  return <button className={'learning-card course-card ' + (featured ? 'featured' : '')} onClick={() => onOpen(course)}>
+    <div className="course-card-cover"><img src={course.cover} alt="" /><span className={'course-label ' + (course.kind === 'free' ? '' : 'paid')}>{course.label}</span></div>
+    <h3>{course.title}</h3>
+    <p>{course.description}</p>
+    <strong className="course-card-benefit">学完你会：{course.benefit}</strong>
+    <small>{course.kind === 'free' ? '免费开始学习' : '查看目录与报名'} <ArrowRight size={16} /></small>
+  </button>
+}
+
+function CourseCenterModal({ courses, onOpen }) {
+  const [keyword, setKeyword] = useState('')
+  const normalizedKeyword = keyword.trim().toLowerCase()
+  const filteredCourses = courses.filter((course) => [course.title, course.description, course.benefit, course.label].join(' ').toLowerCase().includes(normalizedKeyword))
+  return <div className="course-center-content">
+    <div className="course-modal-heading"><div><span className="modal-icon"><FileText size={26} /></span><p className="eyebrow orange"><span /> 全部课程</p><h2>课程中心</h2><p>首页只展示精选课程，完整课程目录、价格和学习状态都在这里。后续新增课程也会统一进入课程中心。</p></div><div className="course-modal-stats"><span><strong>{courses.length}</strong><small>当前课程</small></span><span><strong>免费 + 付费</strong><small>学习方式</small></span></div></div>
+    <label className="course-center-search"><MagnifyingGlass size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索课程、结果或适合人群" /></label>
+    <div className="course-center-grid">{filteredCourses.map((course) => <CourseCard key={course.id} course={course} onOpen={onOpen} />)}</div>
+    {!filteredCourses.length && <div className="course-empty">没有找到匹配课程，试试搜索“生图”“求职”或“WorkBuddy”。</div>}
+  </div>
+}
+
 function EnrollmentOffer({ course, onNotify }) {
   const [open, setOpen] = useState(false)
   const price = course.price || { original: 199, sale: 49.9 }
@@ -165,6 +222,7 @@ function PaidCourseModal({ course, unlocked, onClose, onNotify }) {
       <h2>{course.title}</h2>
       <p>{course.description}</p>
       <div className="modal-course-meta"><span>{course.audience}</span><span>{course.duration}</span><span>{unlocked ? '已解锁' : '已上线'}</span></div>
+      <div className="course-value"><b>学完你会</b><strong>{course.benefit}</strong></div>
       {course.stats && <div className="course-modal-stats paid-course-stats">{course.stats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>}
       <div className="paid-course-grid">
         <section><b>你会拿到什么</b><ul>{course.outputs.map((item) => <li key={item}>{item}</li>)}</ul></section>
@@ -188,6 +246,7 @@ function ImageCourseModal({ unlocked, onNotify }) {
           <p className="eyebrow orange"><span /> 付费课程 · {unlocked ? '已解锁' : '已上线'}</p>
           <h2>AI 生图工作流训练营</h2>
           <p>从平台和模型选型，到分行业提示词，再到系列素材和交付验收，练出一套真正能用于工作和作品集的生图方法。</p>
+          <div className="course-value"><b>学完你会</b><strong>{paidCourses.image.benefit}</strong></div>
         </div>
         <div className="course-modal-stats">{imageCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>
       </div>
@@ -216,7 +275,7 @@ function CareerCourseModal({ unlocked, onNotify }) {
   const [selected, setSelected] = useState(chapters[0])
   const [prompt, setPrompt] = useState(careerCoursePrompts[0])
   return <div className="course-modal-content career-course-content">
-    <div className="course-modal-heading"><div><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 付费课程 · {unlocked ? '已解锁' : '已上线'}</p><h2>大学生求职 AI 课</h2><p>从岗位定位、JD 拆解到简历、作品集、投递、面试和 Offer 决策，完成一套可执行的求职闭环。</p></div><div className="course-modal-stats">{careerCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div></div>
+    <div className="course-modal-heading"><div><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 付费课程 · {unlocked ? '已解锁' : '已上线'}</p><h2>大学生求职 AI 课</h2><p>从岗位定位、JD 拆解到简历、作品集、投递、面试和 Offer 决策，完成一套可执行的求职闭环。</p><div className="course-value"><b>学完你会</b><strong>{paidCourses.career.benefit}</strong></div></div><div className="course-modal-stats">{careerCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div></div>
     <div className="course-modal-layout"><div className="course-chapter-list career-course-list">{careerCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}</div><article className="course-detail career-course-detail"><span className="course-detail-number">第 {selected.number} 章</span><h3>{selected.title}</h3><p className="course-detail-intro">{selected.intro}</p>{unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div><div className="prompt-library"><div className="prompt-library-heading"><b>求职 Prompt 模板</b><select value={prompt.label} onChange={(event) => setPrompt(careerCoursePrompts.find((item) => item.label === event.target.value) || careerCoursePrompts[0])}>{careerCoursePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('求职 Prompt 已复制') }}>复制 Prompt <ArrowRight size={15} /></button></div><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下证据、版本和复盘记录，最后形成完整求职作品集。</div></> : <div className="course-lock-note"><UserCircle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、求职 Prompt、简历模板和面试模拟，报名后解锁。</p></div>}{unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 大学生求职 AI 课已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.career} onNotify={onNotify} />}</article></div>
   </div>
 }
@@ -380,6 +439,12 @@ export function App() {
     setSelectedChapter(nextChapter)
     setModal('course')
   }
+  const openCatalogCourse = (course) => {
+    if (course.kind === 'free') openCourse()
+    else if (course.id === 'image') setModal('image-course')
+    else if (course.id === 'career') setModal('career-course')
+    else setModal({ kind: 'paid-course', course })
+  }
   const openReader = async () => {
     setModal('reader')
     if (courseDetails) return
@@ -504,8 +569,8 @@ export function App() {
 
             <aside className="side-stack">
               <section className="side-card" id="skills">
-                <div className="side-heading"><h3>Skill 本周推荐</h3><button className="text-link" onClick={() => notify('当前页面已展示本周精选 Skill')}>更多 Skill <ArrowRight size={15} /></button></div>
-                <div className="skill-list">{skills.map(({ icon: Icon, name, detail, count }) => <button className="skill-item" key={name} onClick={() => notify(`已打开：${name}`)}><span className="skill-icon"><Icon size={20} weight="duotone" /></span><span><b>{name}</b><small>{detail}</small></span><em>{count}</em></button>)}</div>
+                <div className="side-heading"><h3>Skill 本周推荐</h3><button className="text-link" onClick={() => setModal('skills')}>Skill 广场 <ArrowRight size={15} /></button></div>
+                <div className="skill-list">{skills.map((skill) => { const Icon = skill.icon; return <button className="skill-item" key={skill.id} onClick={() => setModal({ kind: 'skill', skill })}><span className="skill-icon"><Icon size={20} weight="duotone" /></span><span><b>{skill.name}</b><small>{skill.detail}</small></span><em>{skill.count}</em></button> })}</div>
               </section>
               <section className="side-card contribution-card" id="community">
                 <div className="side-heading"><h3>学员贡献</h3><UsersThree size={21} weight="duotone" /></div>
@@ -523,10 +588,10 @@ export function App() {
         <section className="page-width learning-strip" id="courses">
           <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，付费课程带你完成更完整的结果。</p></div>
           <div className="learning-cards">
-            <button className="learning-card featured" onClick={openCourse}><span className="course-label">免费课程</span><h3>WorkBuddy 免费实战课</h3><p>35 章完整内容，带你从安装、任务、Skill、实战案例到自己的 AI 工作系统</p><div className="progress"><span style={{ width: `${Math.max(8, Math.round((completedChapters.length / allChapters.length) * 100))}%` }} /></div><small>{completedChapters.length ? `已完成 ${completedChapters.length}/${allChapters.length} 章 · 继续学习` : '查看完整目录，开始第一章'} <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: paidCourses.codex })}><span className="course-label paid">付费进阶</span><h3>Codex 橙皮书</h3><p>从 0 到 1 掌握 AI 编程思维与实战方法</p><small>查看目录与报名 <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => setModal('image-course')}><span className="course-label paid">付费进阶</span><h3>AI 生图工作流训练营</h3><p>平台、模型、提示词与行业案例，练出可交付的视觉生产力</p><small>查看课程大纲 <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => setModal('career-course')}><span className="course-label paid">付费进阶</span><h3>大学生求职 AI 课</h3><p>用 AI 完成从定位、简历到面试的求职闭环</p><small>查看目录与报名 <ArrowRight size={16} /></small></button>
+            <CourseCard course={freeCourse} featured onOpen={openCatalogCourse} />
+            <CourseCard course={paidCourses.image} onOpen={openCatalogCourse} />
+            <CourseCard course={paidCourses.career} onOpen={openCatalogCourse} />
+            <button className="learning-more-card" onClick={() => setModal('course-center')}><span className="learning-more-number">{courseCatalog.length}</span><b>门课程</b><p>进入课程中心，按主题、结果和学习方式筛选</p><span className="text-link">查看全部课程 <ArrowRight size={16} /></span></button>
           </div>
         </section>
 
@@ -542,7 +607,7 @@ export function App() {
 
       <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills">Skill 广场</a><a href="#community">学员共创</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
       {authMode && <AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} onAuthenticated={setSession} onNotify={notify} />}
       {adminData && session?.role === 'admin' && <AdminPanel data={adminData} loading={adminLoading} onRefresh={refreshAdmin} onReview={handleReview} onGrant={handleGrantCourse} onClose={() => setAdminData(null)} />}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
