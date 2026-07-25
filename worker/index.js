@@ -1,6 +1,25 @@
 const SESSION_COOKIE = "wu_session";
 const SESSION_DAYS = 30;
 
+function corsHeaders(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const allowed = String(env.CORS_ORIGIN || "https://diyiwuyan.github.io").split(",").map((item) => item.trim()).filter(Boolean);
+  const headers = { "Vary": "Origin" };
+  if (allowed.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+    headers["Access-Control-Allow-Headers"] = "Content-Type";
+    headers["Access-Control-Allow-Methods"] = "GET,POST,PATCH,OPTIONS";
+  }
+  return headers;
+}
+
+function withCors(response, request, env) {
+  const headers = new Headers(response.headers);
+  Object.entries(corsHeaders(request, env)).forEach(([key, value]) => headers.set(key, value));
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -59,7 +78,7 @@ async function currentUser(request, env) {
 }
 
 function sessionCookie(token) {
-  return SESSION_COOKIE + "=" + token + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=" + (SESSION_DAYS * 86400);
+  return SESSION_COOKIE + "=" + token + "; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=" + (SESSION_DAYS * 86400);
 }
 
 async function sendAuthEmail(env, email, code) {
@@ -189,21 +208,24 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) {
+      if (request.method === "OPTIONS") return withCors(new Response(null, { status: 204 }), request, env);
       if (!env.DB) {
-        await env.ASSETS.fetch(request);
-        return json({ message: "API 尚未配置数据库" }, 404);
+        if (env.ASSETS) await env.ASSETS.fetch(request);
+        return withCors(json({ message: "API 尚未配置数据库" }, 404), request, env);
       }
-      try { return await handleApi(request, env, url); } catch (error) {
-        return json({ message: "服务器处理失败", detail: env.ENVIRONMENT === "development" ? String(error) : undefined }, 500);
+      try { return withCors(await handleApi(request, env, url), request, env); } catch (error) {
+        return withCors(json({ message: "服务器处理失败", detail: env.ENVIRONMENT === "development" ? String(error) : undefined }, 500), request, env);
       }
     }
-
-    const response = await env.ASSETS.fetch(request);
-    const acceptsHtml = request.headers.get("accept")?.includes("text/html");
-    if (response.status !== 404 || !acceptsHtml || !["GET", "HEAD"].includes(request.method)) return response;
-    const indexUrl = new URL(request.url);
-    indexUrl.pathname = "/index.html";
-    indexUrl.search = "";
-    return env.ASSETS.fetch(new Request(indexUrl, request));
+    if (env.ASSETS) {
+      const response = await env.ASSETS.fetch(request);
+      const acceptsHtml = request.headers.get("accept")?.includes("text/html");
+      if (response.status !== 404 || !acceptsHtml || !["GET", "HEAD"].includes(request.method)) return response;
+      const indexUrl = new URL(request.url);
+      indexUrl.pathname = "/index.html";
+      indexUrl.search = "";
+      return env.ASSETS.fetch(new Request(indexUrl, request));
+    }
+    return new Response("Not found", { status: 404 });
   },
 };

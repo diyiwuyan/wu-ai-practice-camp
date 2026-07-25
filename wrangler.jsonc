@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wu-ai-practice-camp-api",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-07-25",
+  "workers_dev": true,
+  "vars": {
+    "ADMIN_EMAIL": "diyiwuyan@163.com",
+    "CORS_ORIGIN": "https://diyiwuyan.github.io",
+    "ENVIRONMENT": "production",
+    "MAIL_FROM": "武同学AI实践营 <onboarding@resend.dev>"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wu-ai-practice-camp-db",
+      "database_id": "REPLACE_AFTER_D1_CREATE"
+    }
+  ]
+}
