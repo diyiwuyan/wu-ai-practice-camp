@@ -6,6 +6,7 @@ const STORAGE = {
   authCode: 'wu-ai-demo-auth-code',
   users: 'wu-ai-demo-users',
   submissions: 'wu-ai-demo-submissions',
+  redemptionCodes: 'wu-ai-demo-redemption-codes',
 }
 
 function readJson(key, fallback) {
@@ -57,7 +58,9 @@ export async function verifyAuthCode(email, code, name = '') {
     if (!saved || saved.email !== email || saved.code !== code || saved.expiresAt < Date.now()) throw new Error('验证码错误或已过期')
     const users = readJson(STORAGE.users, [])
     const existing = users.find((item) => item.email === email)
-    const user = existing || { id: 'demo-' + Date.now(), email, name: name || email.split('@')[0], role: email === 'diyiwuyan@163.com' ? 'admin' : 'learner', createdAt: new Date().toISOString() }
+    const user = existing || { id: 'demo-' + Date.now(), email, name: name || email.split('@')[0], role: email === 'diyiwuyan@163.com' ? 'admin' : 'learner', points: 0, unlockedCourses: [], createdAt: new Date().toISOString() }
+    user.points = Number(user.points || 0)
+    user.unlockedCourses = user.unlockedCourses || []
     writeJson(STORAGE.users, [...users.filter((item) => item.email !== email), user])
     writeJson(STORAGE.session, user)
     return { user, demo: true }
@@ -69,7 +72,10 @@ export async function getSession() {
     const payload = await request('/me')
     return payload.user || null
   } catch (error) {
-    if (DEMO_MODE && error.status === 404) return readJson(STORAGE.session, null)
+    if (DEMO_MODE && error.status === 404) {
+      const user = readJson(STORAGE.session, null)
+      return user ? { ...user, points: Number(user.points || 0), unlockedCourses: user.unlockedCourses || [] } : null
+    }
     return null
   }
 }
@@ -120,5 +126,46 @@ export async function grantCourse(userId, courseId) {
     const current = readJson(STORAGE.session, null)
     if (current?.id === userId) writeJson(STORAGE.session, { ...current, unlockedCourses: [...new Set([...(current.unlockedCourses || []), courseId])] })
     return { ok: true, courseId, demo: true }
+  }
+}
+
+export async function redeemPoints(code) {
+  try { return await request('/points/redeem', { method: 'POST', body: JSON.stringify({ code }) }) } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) throw error
+    const normalized = String(code || '').trim().toUpperCase()
+    const codes = readJson(STORAGE.redemptionCodes, [])
+    const item = codes.find((entry) => entry.code === normalized && !entry.redeemedBy)
+    if (!item) throw new Error('兑换码不存在或已使用')
+    const current = readJson(STORAGE.session, null)
+    if (!current) throw new Error('请先登录')
+    const user = { ...current, points: Number(current.points || 0) + Number(item.points), unlockedCourses: current.unlockedCourses || [] }
+    writeJson(STORAGE.redemptionCodes, codes.map((entry) => entry.code === normalized ? { ...entry, redeemedBy: current.id, redeemedAt: new Date().toISOString() } : entry))
+    writeJson(STORAGE.session, user)
+    return { ok: true, addedPoints: Number(item.points), user, demo: true }
+  }
+}
+
+export async function unlockCourse(courseId, price = 49.9) {
+  try { return await request('/courses/' + encodeURIComponent(courseId) + '/unlock', { method: 'POST' }) } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) throw error
+    const current = readJson(STORAGE.session, null)
+    if (!current) throw new Error('请先登录')
+    const unlockedCourses = current.unlockedCourses || []
+    if (unlockedCourses.includes(courseId)) return { ok: true, alreadyUnlocked: true, user: current, demo: true }
+    if (Number(current.points || 0) < price) throw new Error(`积分不足，需要 ${price} 积分`)
+    const user = { ...current, points: Number(current.points || 0) - price, unlockedCourses: [...new Set([...unlockedCourses, courseId])] }
+    writeJson(STORAGE.session, user)
+    const users = readJson(STORAGE.users, [])
+    writeJson(STORAGE.users, users.map((item) => item.id === user.id ? user : item))
+    return { ok: true, courseId, spentPoints: price, user, demo: true }
+  }
+}
+
+export async function createRedemptionCodes(count, points) {
+  try { return await request('/admin/redemption-codes', { method: 'POST', body: JSON.stringify({ count, points }) }) } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) throw error
+    const codes = Array.from({ length: Math.max(1, Math.min(200, Number(count) || 1)) }, () => ({ code: `WU-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`, points: Number(points) }))
+    writeJson(STORAGE.redemptionCodes, [...codes, ...readJson(STORAGE.redemptionCodes, [])])
+    return { ok: true, points: Number(points), codes, demo: true }
   }
 }

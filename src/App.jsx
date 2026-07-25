@@ -22,7 +22,7 @@ import { freeCourseGroups, freeCourseStats } from './courseContent'
 import { hydrateCourseEmbeds } from './courseEmbeds'
 import { careerCourseCase, careerCourseDeliverables, careerCourseGroups, careerCoursePrompts, careerCourseResumeExamples, careerCourseStats, careerCourseVisuals } from './careerCourseContent'
 import { imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptRules } from './imageCourseContent'
-import { createSubmission, getAdminDashboard, getSession, grantCourse, isDemoAuth, logout, requestAuthCode, reviewSubmission, verifyAuthCode } from './community'
+import { createRedemptionCodes, createSubmission, getAdminDashboard, getSession, grantCourse, isDemoAuth, logout, redeemPoints, requestAuthCode, reviewSubmission, unlockCourse, verifyAuthCode } from './community'
 import { skillCatalog, skillCategories } from './skillCatalog'
 
 const cases = [
@@ -113,6 +113,8 @@ const freeCourse = {
 
 const courseCatalog = [freeCourse, paidCourses.image, paidCourses.career, paidCourses.codex]
 
+const formatPoints = (value) => Number(value || 0).toFixed(1).replace(/\.0$/, '')
+
 function CourseModal({ selectedChapter, onSelect, onStart }) {
   const [keyword, setKeyword] = useState('')
   const normalizedKeyword = keyword.trim().toLowerCase()
@@ -199,7 +201,7 @@ function CourseCard({ course, featured = false, onOpen }) {
     <h3>{course.title}</h3>
     <p>{course.description}</p>
     <strong className="course-card-benefit">学完你会：{course.benefit}</strong>
-    <small>{course.kind === 'free' ? '免费开始学习' : '查看目录与报名'} <ArrowRight size={16} /></small>
+    <small>{course.kind === 'free' ? '免费开始学习' : `整门 ${formatPoints(course.price?.sale || 49.9)} 积分 · 查看目录`} <ArrowRight size={16} /></small>
   </button>
 }
 
@@ -215,12 +217,29 @@ function CourseCenterModal({ courses, onOpen }) {
   </div>
 }
 
-function EnrollmentOffer({ course }) {
+function EnrollmentOffer({ course, user, onLogin, onAuthenticated, onNotify }) {
   const price = course.price || { original: 199, sale: 49.9 }
-  return <section className="enrollment-offer"><div className="enrollment-heading"><b>报名方式</b><small>打开课程后直接查看价格与联系方式</small></div><div className="enrollment-price"><span>整门课程</span><del>原价 ¥{price.original}</del><strong>¥{price.sale}</strong><small>限时优惠价 · 完整课程一次解锁</small></div><div className="enrollment-contact"><img src="assets/contact-personal-qr.jpg" alt="武同学个人二维码" /><div><b>添加武同学报名</b><p>扫码添加武同学，回复“课程”，发送你想报名的课程名称。</p><small>当前课程为整门课程总价，不按章节单独收费；后续可在课程配置中调整整门课程的原价和优惠价。</small></div></div></section>
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const unlock = async (withCode = false) => {
+    if (!user) { onLogin?.(); return }
+    setBusy(true)
+    try {
+      let current = user
+      if (withCode) {
+        const recharge = await redeemPoints(code)
+        current = recharge.user || current
+        onAuthenticated?.(current)
+      }
+      const result = await unlockCourse(course.id, price.sale)
+      onAuthenticated?.(result.user || current)
+      onNotify?.(`${course.title}已解锁，扣除 ${formatPoints(result.spentPoints || price.sale)} 积分`)
+    } catch (error) { onNotify?.(error.message) } finally { setBusy(false) }
+  }
+  return <section className="enrollment-offer"><div className="enrollment-heading"><b>积分解锁</b><small>整门课程一次解锁，不按章节单独收费</small></div><div className="enrollment-price"><span>课程价格</span><del>原价 {formatPoints(price.original)} 积分</del><strong>{formatPoints(price.sale)} 积分</strong><small>积分兑换后不退不换 · 解锁后永久可学</small></div><div className="points-balance-line"><span>当前账户积分</span><strong>{user ? formatPoints(user.points) : '登录后查看'}</strong></div>{user && Number(user.points || 0) >= Number(price.sale) && <button className="button button-primary full" disabled={busy} onClick={() => unlock(false)}>{busy ? '处理中…' : `直接用 ${formatPoints(price.sale)} 积分解锁`}</button>}<div className="redeem-course-box"><div><b>没有积分？先兑换充值码</b><small>例如 50 积分兑换码可解锁 49.9 积分课程，剩余 0.1 积分可留作下次使用。</small></div><div className="redeem-course-row"><input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="输入兑换码，例如 WU-AB12-CD34-EF56" /><button className="button button-outline" disabled={busy || !code.trim()} onClick={() => unlock(true)}>{busy ? '处理中…' : '兑换并解锁'}</button></div></div><p className="points-policy">积分仅可用于本营课程及后续开放的数字权益；积分一经兑换到账，不退、不换、不折现。</p></section>
 }
 
-function PaidCourseModal({ course, unlocked, onClose, onNotify }) {
+function PaidCourseModal({ course, unlocked, user, onLogin, onAuthenticated, onClose, onNotify }) {
   return (
     <div className="paid-course-content">
       <span className="modal-icon"><Sparkle size={26} /></span>
@@ -235,12 +254,12 @@ function PaidCourseModal({ course, unlocked, onClose, onNotify }) {
         <section><b>课程重点</b><ul>{course.syllabus.map((item) => <li key={item}>{item}</li>)}</ul></section>
       </div>
       {course.chapters?.length > 0 && <section className="paid-chapter-outline"><b>课程目录 · 共 {course.chapters.length} 节</b><ol>{course.chapters.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item}</strong><small>{unlocked ? '已解锁，可开始学习' : '报名后解锁本课程内容'}</small></div></li>)}</ol></section>}
-      {unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 本课程已解锁，可以开始学习。</div> : <EnrollmentOffer course={course} />}
+      {unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 本课程已解锁，可以开始学习。</div> : <EnrollmentOffer course={course} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} />}
     </div>
   )
 }
 
-function ImageCourseModal({ unlocked, onNotify }) {
+function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }) {
   const chapters = imageCourseGroups.flatMap((group) => group.chapters)
   const [selected, setSelected] = useState(chapters[0])
   const [prompt, setPrompt] = useState(imageCoursePrompts[0])
@@ -269,20 +288,20 @@ function ImageCourseModal({ unlocked, onNotify }) {
             <code>{prompt.prompt}</code>
             <button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('提示词模板已复制') }}>复制模板 <ArrowRight size={15} /></button>
           </div><section className="prompt-rules"><b>提示词规范</b><div>{imagePromptRules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section><section className="image-example-section"><div className="prompt-library-heading"><b>示例图：同一套规范如何落地</b><small>先看用途，再看画面结构</small></div><div className="image-example-grid">{imageCourseExamples.map((example) => <article key={example.title}><img src={example.image} alt={example.title} /><span>{example.type}</span><b>{example.title}</b><p>{example.takeaway}</p><button className="text-link" onClick={() => { navigator.clipboard?.writeText(example.prompt); onNotify('示例提示词已复制') }}>复制示例提示词 <ArrowRight size={15} /></button></article>)}</div></section><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下过程稿、提示词和验收记录，最后组成自己的作品集。</div></> : <div className="course-lock-note"><Sparkle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、提示词规范、行业模板和示例图，报名后解锁。</p></div>}
-          {unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 生图训练营已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.image} />}
+          {unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 生图训练营已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.image} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} />}
         </article>
       </div>
     </div>
   )
 }
 
-function CareerCourseModal({ unlocked, onNotify }) {
+function CareerCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }) {
   const chapters = careerCourseGroups.flatMap((group) => group.chapters)
   const [selected, setSelected] = useState(chapters[0])
   const [prompt, setPrompt] = useState(careerCoursePrompts[0])
   return <div className="course-modal-content career-course-content">
     <div className="course-modal-heading"><div><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 付费课程 · {unlocked ? '已解锁' : '已上线'}</p><h2>大学生求职 AI 课</h2><p>把 7 天启动训练营和完整求职课整合起来：从卡点诊断、岗位定位、JD 拆解到简历、作品集、投递、面试和 Offer 决策，做出一套可执行的求职闭环。</p><div className="course-value"><b>学完你会</b><strong>{paidCourses.career.benefit}</strong></div></div><div className="course-modal-stats">{careerCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div></div>
-    <div className="course-modal-layout"><div className="course-chapter-list career-course-list">{careerCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}</div><article className="course-detail career-course-detail"><span className="course-detail-number">第 {selected.number} 章</span><h3>{selected.title}</h3><p className="course-detail-intro">{selected.intro}</p>{unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>{selected.acceptance && <div className="course-detail-block"><b>验收标准</b><p>{selected.acceptance}</p></div>}<div className="prompt-library"><div className="prompt-library-heading"><b>求职 Prompt 模板</b><select value={prompt.label} onChange={(event) => setPrompt(careerCoursePrompts.find((item) => item.label === event.target.value) || careerCoursePrompts[0])}>{careerCoursePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('求职 Prompt 已复制') }}>复制 Prompt <ArrowRight size={15} /></button></div><CareerCourseMaterials /><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下证据、版本和复盘记录，最后形成完整求职作品集。</div></> : <div className="course-lock-note"><UserCircle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、求职 Prompt、简历模板、投递计划和面试模拟，报名后解锁。</p></div>}{unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 大学生求职 AI 课已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.career} />}</article></div>
+    <div className="course-modal-layout"><div className="course-chapter-list career-course-list">{careerCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}</div><article className="course-detail career-course-detail"><span className="course-detail-number">第 {selected.number} 章</span><h3>{selected.title}</h3><p className="course-detail-intro">{selected.intro}</p>{unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>{selected.acceptance && <div className="course-detail-block"><b>验收标准</b><p>{selected.acceptance}</p></div>}<div className="prompt-library"><div className="prompt-library-heading"><b>求职 Prompt 模板</b><select value={prompt.label} onChange={(event) => setPrompt(careerCoursePrompts.find((item) => item.label === event.target.value) || careerCoursePrompts[0])}>{careerCoursePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('求职 Prompt 已复制') }}>复制 Prompt <ArrowRight size={15} /></button></div><CareerCourseMaterials /><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下证据、版本和复盘记录，最后形成完整求职作品集。</div></> : <div className="course-lock-note"><UserCircle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、求职 Prompt、简历模板、投递计划和面试模拟，报名后解锁。</p></div>}{unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 大学生求职 AI 课已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.career} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} />}</article></div>
   </div>
 }
 
@@ -343,8 +362,17 @@ function ContributionModal({ user, onClose, onLogin, onNotify }) {
   return <div className="modal contribution-modal" role="dialog" aria-modal="true"><button className="modal-close" onClick={onClose} aria-label="关闭"><X size={22} /></button><span className="modal-icon"><Plus size={26} /></span><p className="eyebrow orange"><span /> 学员共创</p><h2>分享你的工作流</h2><p>{user ? '投稿人：' + (user.name || user.email) : '登录后才能提交投稿，内容会先进入管理员审核。'}</p>{user ? <div className="contribution-form"><input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="投稿标题，例如：用 AI 做一份周报" /><select value={form.category} onChange={(event) => update('category', event.target.value)}><option>实战案例</option><option>Skill</option><option>Prompt</option><option>知识卡片</option></select><textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="你解决了什么问题？具体怎么做？最后得到什么结果？" /><textarea value={form.prompt} onChange={(event) => update('prompt', event.target.value)} placeholder="可选：贴出 Prompt、步骤或关键配置" /><input value={form.assetUrl} onChange={(event) => update('assetUrl', event.target.value)} placeholder="可选：成品图片或文件链接" /><button className="button button-primary full" disabled={busy} onClick={submit}>{busy ? '提交中…' : '提交投稿'}</button></div> : <button className="button button-primary full" onClick={() => { onClose(); onLogin() }}>先去登录</button>}</div>
 }
 
-function AdminPanel({ data, loading, onRefresh, onReview, onGrant, onClose }) {
-  return <div className="modal-backdrop" onClick={onClose}><div className="modal admin-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose} aria-label="关闭"><X size={22} /></button><div className="admin-heading"><div><p className="eyebrow orange"><span /> 管理员工作台</p><h2>社区运营中心</h2><p>查看用户、处理投稿、维护社区内容状态。</p></div><button className="button button-outline small" onClick={onRefresh}>刷新数据</button></div>{loading ? <div className="course-reader-loading">正在读取管理数据…</div> : <><div className="admin-stats"><span><strong>{data?.stats?.users || 0}</strong><small>用户</small></span><span><strong>{data?.stats?.submissions || 0}</strong><small>投稿</small></span><span><strong>{data?.stats?.pending || 0}</strong><small>待审核</small></span></div><section className="admin-section"><h3>投稿审核</h3>{data?.submissions?.length ? <div className="admin-table">{data.submissions.map((item) => <article key={item.id}><div><b>{item.title}</b><small>{item.author || item.authorEmail || '匿名'} · {item.category} · {item.status === 'pending' ? '待审核' : item.status === 'approved' ? '已通过' : '已拒绝'}</small><p>{item.description}</p></div><div className="admin-actions"><button className="button button-primary small" disabled={item.status === 'approved'} onClick={() => onReview(item.id, 'approved')}>通过</button><button className="button button-outline small" disabled={item.status === 'rejected'} onClick={() => onReview(item.id, 'rejected')}>退回</button></div></article>)}</div> : <div className="course-empty">目前还没有投稿。</div>}</section><section className="admin-section"><h3>最近用户与课程解锁</h3><div className="admin-user-list">{(data?.users || []).slice(0, 8).map((item) => <article className="admin-user-row" key={item.id}><div><b>{item.name || '未命名'}</b><small>{item.email} · {item.role === 'admin' ? '管理员' : '学员'}</small></div><div className="admin-actions"><button className="button button-outline small" disabled={item.unlockedCourses?.includes('image')} onClick={() => onGrant(item.id, 'image')}>{item.unlockedCourses?.includes('image') ? '生图已解锁' : '解锁生图课'}</button><button className="button button-outline small" disabled={item.unlockedCourses?.includes('career')} onClick={() => onGrant(item.id, 'career')}>{item.unlockedCourses?.includes('career') ? '求职已解锁' : '解锁求职课'}</button></div></article>)}</div></section></>}</div></div>
+function AdminPanel({ data, loading, onRefresh, onReview, onGenerateCodes, onClose }) {
+  const [count, setCount] = useState(20)
+  const [points, setPoints] = useState(50)
+  const [generated, setGenerated] = useState([])
+  const [busy, setBusy] = useState(false)
+  const generate = async () => {
+    setBusy(true)
+    try { const result = await onGenerateCodes(count, points); setGenerated(result.codes || []) } finally { setBusy(false) }
+  }
+  const copyGenerated = () => { navigator.clipboard?.writeText(generated.map((item) => `${item.code}\t${item.points}积分`).join('\n')); }
+  return <div className="modal-backdrop" onClick={onClose}><div className="modal admin-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose} aria-label="关闭"><X size={22} /></button><div className="admin-heading"><div><p className="eyebrow orange"><span /> 管理员工作台</p><h2>社区运营中心</h2><p>查看用户、处理投稿、生成课程积分兑换码。</p></div><button className="button button-outline small" onClick={onRefresh}>刷新数据</button></div>{loading ? <div className="course-reader-loading">正在读取管理数据…</div> : <><div className="admin-stats"><span><strong>{data?.stats?.users || 0}</strong><small>用户</small></span><span><strong>{data?.stats?.submissions || 0}</strong><small>投稿</small></span><span><strong>{data?.stats?.pending || 0}</strong><small>待审核</small></span></div><section className="admin-section admin-points-section"><h3>生成积分兑换码</h3><p>用户兑换后积分到账，再用积分解锁课程。兑换到账的积分不退、不换、不折现。</p><div className="admin-code-form"><label>生成数量<input type="number" min="1" max="200" value={count} onChange={(event) => setCount(event.target.value)} /></label><label>每码积分<input type="number" min="0.1" step="0.1" value={points} onChange={(event) => setPoints(event.target.value)} /></label><button className="button button-primary" disabled={busy} onClick={generate}>{busy ? '生成中…' : '批量生成'}</button></div>{generated.length > 0 && <div className="generated-codes"><div><b>本次生成 {generated.length} 个兑换码</b><button className="text-link" onClick={copyGenerated}>复制全部</button></div><textarea readOnly value={generated.map((item) => `${item.code}\t${item.points}积分`).join('\n')} /></div>}<div className="admin-code-list"><b>最近兑换码</b>{data?.redemptionCodes?.length ? data.redemptionCodes.slice(0, 20).map((item) => <span key={item.id}><code>{item.id.slice(0, 8)}…</code><strong>{formatPoints(item.points)} 积分</strong><em className={item.status}>{item.status === 'unused' ? '未使用' : `已兑换${item.redeemedEmail ? ' · ' + item.redeemedEmail : ''}`}</em></span>) : <small>还没有生成兑换码</small>}</div></section><section className="admin-section"><h3>投稿审核</h3>{data?.submissions?.length ? <div className="admin-table">{data.submissions.map((item) => <article key={item.id}><div><b>{item.title}</b><small>{item.author || item.authorEmail || '匿名'} · {item.category} · {item.status === 'pending' ? '待审核' : item.status === 'approved' ? '已通过' : '已拒绝'}</small><p>{item.description}</p></div><div className="admin-actions"><button className="button button-primary small" disabled={item.status === 'approved'} onClick={() => onReview(item.id, 'approved')}>通过</button><button className="button button-outline small" disabled={item.status === 'rejected'} onClick={() => onReview(item.id, 'rejected')}>退回</button></div></article>)}</div> : <div className="course-empty">目前还没有投稿。</div>}</section><section className="admin-section"><h3>用户积分与课程状态</h3><div className="admin-user-list">{(data?.users || []).slice(0, 20).map((item) => <article className="admin-user-row" key={item.id}><div><b>{item.name || '未命名'}</b><small>{item.email} · {item.role === 'admin' ? '管理员' : '学员'}</small></div><div className="admin-user-points"><strong>{formatPoints(item.points)} 积分</strong><small>{item.unlockedCourses?.length ? `已解锁 ${item.unlockedCourses.length} 门` : '暂无课程解锁'}</small></div></article>)}</div></section></>}</div></div>
 }
 
 const allChapters = freeCourseGroups.flatMap((group) => group.chapters)
@@ -501,6 +529,14 @@ export function App() {
       notify(courseName + '已解锁')
     } catch (error) { notify(error.message) }
   }
+  const handleGenerateCodes = async (count, points) => {
+    try {
+      const result = await createRedemptionCodes(count, points)
+      await refreshAdmin()
+      notify(`已生成 ${result.codes?.length || count} 个兑换码`)
+      return result
+    } catch (error) { notify(error.message); throw error }
+  }
 
   return (
     <div className="app-shell">
@@ -526,7 +562,7 @@ export function App() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索案例、Skill、课程" />
           </label>
           <button className="icon-button" aria-label="通知" onClick={() => notify('目前没有新的通知')}><Bell size={20} /></button>
-          {session ? <div className="session-actions"><span className="session-name">{session.name || session.email}</span>{session.role === 'admin' && <button className="button button-outline small" onClick={openAdmin}>管理后台</button>}<button className="button button-primary small" onClick={async () => { await logout(); setSession(null); notify('已退出登录') }}>退出</button></div> : <><button className="button button-outline small" onClick={() => setAuthMode('login')}>登录</button><button className="button button-primary small" onClick={() => setAuthMode('register')}>注册</button></>}
+          {session ? <div className="session-actions"><span className="session-name">{session.name || session.email}</span><span className="session-points">{formatPoints(session.points)} 积分</span>{session.role === 'admin' && <button className="button button-outline small" onClick={openAdmin}>管理后台</button>}<button className="button button-primary small" onClick={async () => { await logout(); setSession(null); notify('已退出登录') }}>退出</button></div> : <><button className="button button-outline small" onClick={() => setAuthMode('login')}>登录</button><button className="button button-primary small" onClick={() => setAuthMode('register')}>注册</button></>}
         </div>
       </header>
 
@@ -624,9 +660,9 @@ export function App() {
 
       <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills">Skill 广场</a><a href="#community">学员共创</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
       {authMode && <AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} onAuthenticated={setSession} onNotify={notify} />}
-      {adminData && session?.role === 'admin' && <AdminPanel data={adminData} loading={adminLoading} onRefresh={refreshAdmin} onReview={handleReview} onGrant={handleGrantCourse} onClose={() => setAdminData(null)} />}
+      {adminData && session?.role === 'admin' && <AdminPanel data={adminData} loading={adminLoading} onRefresh={refreshAdmin} onReview={handleReview} onGenerateCodes={handleGenerateCodes} onClose={() => setAdminData(null)} />}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
     </div>
   )

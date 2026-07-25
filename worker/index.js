@@ -69,12 +69,28 @@ async function currentUser(request, env) {
     "SELECT users.id, users.email, users.name, users.role, users.status, users.created_at AS createdAt FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'",
   ).bind(tokenHash, Date.now()).first();
   if (!row) return null;
+  return enrichUser(env, row);
+}
+
+async function enrichUser(env, row) {
   let unlockedCourses = [];
+  let points = 0;
   try {
     const grants = await env.DB.prepare("SELECT course_id AS courseId FROM course_entitlements WHERE user_id = ? ORDER BY granted_at DESC").bind(row.id).all();
     unlockedCourses = (grants.results || []).map((item) => item.courseId);
   } catch { /* entitlement table may not exist until the next schema migration */ }
-  return { ...row, unlockedCourses };
+  try {
+    const balance = await env.DB.prepare("SELECT balance FROM user_points WHERE user_id = ?").bind(row.id).first();
+    points = Number(balance?.balance || 0);
+  } catch { /* points table may not exist during a rolling deployment */ }
+  return { ...row, points, unlockedCourses };
+}
+
+async function getCoursePrice(env, courseId) {
+  try {
+    const row = await env.DB.prepare("SELECT points FROM course_prices WHERE course_id = ?").bind(courseId).first();
+    return Number(row?.points || 49.9);
+  } catch { return 49.9; }
 }
 
 function sessionCookie(token) {
@@ -133,12 +149,7 @@ async function handleApi(request, env, url) {
     const user = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users WHERE email = ?").bind(email).first();
     const sessionToken = randomToken();
     await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(await sha256(sessionToken), user.id, Date.now() + SESSION_DAYS * 86400 * 1000, isoNow()).run();
-    let unlockedCourses = [];
-    try {
-      const grants = await env.DB.prepare("SELECT course_id AS courseId FROM course_entitlements WHERE user_id = ? ORDER BY granted_at DESC").bind(user.id).all();
-      unlockedCourses = (grants.results || []).map((item) => item.courseId);
-    } catch { /* entitlement table may not exist until the next schema migration */ }
-    return json({ ok: true, user: { ...user, unlockedCourses } }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
+    return json({ ok: true, user: await enrichUser(env, user) }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
   }
 
   if (request.method === "POST" && route === "auth/logout") {
@@ -148,6 +159,63 @@ async function handleApi(request, env, url) {
   }
 
   if (request.method === "GET" && route === "me") return json({ user: await currentUser(request, env) });
+
+  if (request.method === "GET" && route === "points/transactions") {
+    const user = await currentUser(request, env);
+    if (!user) return json({ message: "请先登录" }, 401);
+    const transactions = await env.DB.prepare("SELECT id, amount, type, reference_id AS referenceId, note, created_at AS createdAt FROM point_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 100").bind(user.id).all().catch(() => ({ results: [] }));
+    return json({ points: user.points, transactions: transactions.results || [] });
+  }
+
+  if (request.method === "POST" && route === "points/redeem") {
+    const user = await currentUser(request, env);
+    if (!user) return json({ message: "请先登录" }, 401);
+    const payload = await body(request);
+    const code = String(payload.code || "").trim().toUpperCase();
+    if (!code) return json({ message: "请输入兑换码" }, 400);
+    const codeHash = await sha256(code);
+    const record = await env.DB.prepare("SELECT id, points, status FROM redemption_codes WHERE code_hash = ?").bind(codeHash).first();
+    if (!record) return json({ message: "兑换码不存在，请检查后重试" }, 400);
+    if (record.status !== "unused") return json({ message: "兑换码已使用，不能重复兑换" }, 400);
+    const now = isoNow();
+    const claimed = await env.DB.prepare("UPDATE redemption_codes SET status = 'redeemed', redeemed_by = ?, redeemed_at = ? WHERE code_hash = ? AND status = 'unused'").bind(user.id, now, codeHash).run();
+    if (!claimed.meta?.changes) return json({ message: "兑换码刚刚已被使用，请换一个" }, 400);
+    try {
+      await env.DB.batch([
+        env.DB.prepare("INSERT OR IGNORE INTO user_points (user_id, balance, updated_at) VALUES (?, 0, ?)").bind(user.id, now),
+        env.DB.prepare("UPDATE user_points SET balance = balance + ?, updated_at = ? WHERE user_id = ?").bind(Number(record.points), now, user.id),
+        env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'redeem_code', ?, ?, ?)").bind(crypto.randomUUID(), user.id, Number(record.points), record.id, "兑换码充值（积分兑换后不退不换）", now),
+      ]);
+    } catch (error) {
+      await env.DB.prepare("UPDATE redemption_codes SET status = 'unused', redeemed_by = NULL, redeemed_at = NULL WHERE id = ? AND redeemed_by = ?").bind(record.id, user.id).run();
+      throw error;
+    }
+    return json({ ok: true, addedPoints: Number(record.points), user: await enrichUser(env, { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, createdAt: user.createdAt }) });
+  }
+
+  const unlockMatch = route.match(/^courses\/([^/]+)\/unlock$/);
+  if (request.method === "POST" && unlockMatch) {
+    const user = await currentUser(request, env);
+    if (!user) return json({ message: "请先登录" }, 401);
+    const courseId = ["codex", "image", "career"].includes(unlockMatch[1]) ? unlockMatch[1] : "";
+    if (!courseId) return json({ message: "课程编号无效" }, 400);
+    if (user.unlockedCourses.includes(courseId)) return json({ ok: true, alreadyUnlocked: true, user });
+    const price = await getCoursePrice(env, courseId);
+    if (user.points < price) return json({ message: `积分不足，需要 ${price} 积分，当前只有 ${user.points} 积分`, requiredPoints: price, user }, 400);
+    const now = isoNow();
+    const debit = await env.DB.prepare("UPDATE user_points SET balance = balance - ?, updated_at = ? WHERE user_id = ? AND balance >= ?").bind(price, now, user.id, price).run();
+    if (!debit.meta?.changes) return json({ message: "积分不足，请刷新账户后重试" }, 400);
+    try {
+      await env.DB.batch([
+        env.DB.prepare("INSERT OR IGNORE INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), user.id, courseId, "points", now),
+        env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'course_unlock', ?, ?, ?)").bind(crypto.randomUUID(), user.id, -price, courseId, `解锁课程：${courseId}`, now),
+      ]);
+    } catch (error) {
+      await env.DB.prepare("UPDATE user_points SET balance = balance + ?, updated_at = ? WHERE user_id = ?").bind(price, isoNow(), user.id).run();
+      throw error;
+    }
+    return json({ ok: true, courseId, spentPoints: price, user: await enrichUser(env, { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, createdAt: user.createdAt }) });
+  }
 
   if (request.method === "POST" && route === "submissions") {
     const user = await currentUser(request, env);
@@ -167,7 +235,7 @@ async function handleApi(request, env, url) {
   if (request.method === "GET" && route === "admin/dashboard") {
     const user = await currentUser(request, env);
     if (!user || user.role !== "admin") return json({ message: "无管理员权限" }, 403);
-    const users = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users ORDER BY created_at DESC LIMIT 200").all();
+    const users = await env.DB.prepare("SELECT users.id, users.email, users.name, users.role, users.status, users.created_at AS createdAt, COALESCE(user_points.balance, 0) AS points FROM users LEFT JOIN user_points ON user_points.user_id = users.id ORDER BY users.created_at DESC LIMIT 200").all();
     const entitlements = await env.DB.prepare("SELECT user_id AS userId, course_id AS courseId FROM course_entitlements ORDER BY granted_at DESC").all().catch(() => ({ results: [] }));
     const unlockedByUser = (entitlements.results || []).reduce((map, item) => {
       map[item.userId] = [...(map[item.userId] || []), item.courseId];
@@ -176,7 +244,24 @@ async function handleApi(request, env, url) {
     const usersWithCourses = (users.results || []).map((item) => ({ ...item, unlockedCourses: unlockedByUser[item.id] || [] }));
     const submissions = await env.DB.prepare("SELECT submissions.*, users.email AS authorEmail, users.name AS author FROM submissions JOIN users ON users.id = submissions.user_id ORDER BY submissions.created_at DESC LIMIT 200").all();
     const stats = await env.DB.prepare("SELECT COUNT(*) AS submissions, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending FROM submissions").first();
-    return json({ users: usersWithCourses, submissions: submissions.results || [], stats: { users: usersWithCourses.length, submissions: Number(stats?.submissions || 0), pending: Number(stats?.pending || 0) } });
+    const redemptionCodes = await env.DB.prepare("SELECT redemption_codes.id, redemption_codes.points, redemption_codes.status, redemption_codes.redeemed_by AS redeemedBy, redemption_codes.redeemed_at AS redeemedAt, redemption_codes.created_at AS createdAt, users.email AS redeemedEmail FROM redemption_codes LEFT JOIN users ON users.id = redemption_codes.redeemed_by ORDER BY redemption_codes.created_at DESC LIMIT 100").all().catch(() => ({ results: [] }));
+    return json({ users: usersWithCourses, submissions: submissions.results || [], redemptionCodes: redemptionCodes.results || [], stats: { users: usersWithCourses.length, submissions: Number(stats?.submissions || 0), pending: Number(stats?.pending || 0) } });
+  }
+
+  if (request.method === "POST" && route === "admin/redemption-codes") {
+    const user = await currentUser(request, env);
+    if (!user || user.role !== "admin") return json({ message: "无管理员权限" }, 403);
+    const payload = await body(request);
+    const count = Math.min(200, Math.max(1, Math.floor(Number(payload.count || 0))));
+    const points = Number(payload.points || 0);
+    if (!Number.isFinite(points) || points <= 0 || points > 100000) return json({ message: "积分面值需要大于 0 且不超过 100000" }, 400);
+    const records = [];
+    for (let index = 0; index < count; index += 1) {
+      const code = `WU-${randomToken().slice(0, 4).toUpperCase()}-${randomToken().slice(0, 4).toUpperCase()}-${randomToken().slice(0, 4).toUpperCase()}`;
+      records.push({ id: crypto.randomUUID(), code, hash: await sha256(code), points, createdAt: isoNow() });
+    }
+    await env.DB.batch(records.map((item) => env.DB.prepare("INSERT INTO redemption_codes (id, code_hash, points, status, created_at, created_by) VALUES (?, ?, ?, 'unused', ?, ?)").bind(item.id, item.hash, item.points, item.createdAt, user.id)));
+    return json({ ok: true, points, codes: records.map(({ code, points: value }) => ({ code, points: value })) }, 201);
   }
 
   const grantMatch = route.match(/^admin\/users\/([^/]+)\/courses$/);
