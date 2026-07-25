@@ -447,6 +447,23 @@ h1 em { color: var(--orange); font-style: normal; }
 .career-resume-grid figcaption { display: grid; gap: 4px; padding: 9px; }
 .career-resume-grid figcaption b { font-size: 10px; }
 .career-resume-grid figcaption span { color: #856d60; font-size: 9px; line-height: 1.5; }
+.invite-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 28px; overflow: hidden; margin-top: 34px; padding: 30px 34px; border: 1px solid #f2ad88; border-radius: 18px; background: linear-gradient(115deg, #fff0e7, #fffaf7); }
+.invite-card::after { position: absolute; right: 260px; bottom: -58px; width: 190px; height: 190px; border: 22px solid rgba(255, 105, 48, .09); border-radius: 50%; content: ''; }
+.invite-card-copy { position: relative; z-index: 1; min-width: 0; }
+.invite-card h2 { max-width: 600px; margin: 7px 0 10px; font-size: clamp(23px, 3vw, 34px); line-height: 1.2; }
+.invite-card h2 em { color: var(--deep-orange); font-style: normal; }
+.invite-card-copy > p:not(.eyebrow) { max-width: 640px; margin-bottom: 17px; color: #856d60; font-size: 12px; line-height: 1.7; }
+.invite-link-box { display: flex; align-items: center; gap: 8px; max-width: 670px; padding: 7px; border: 1px solid #f0c5ae; border-radius: 10px; background: rgba(255,255,255,.72); }
+.invite-link-box span { min-width: 0; overflow: hidden; flex: 1; padding: 0 6px; color: #755f53; font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.invite-card-stats { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr; align-content: center; gap: 0; padding: 7px 0; border-left: 1px solid #efc7b3; }
+.invite-card-stats span { display: grid; gap: 4px; padding: 12px 0 12px 24px; border-bottom: 1px solid #f1d8cb; }
+.invite-card-stats span:last-child { border-bottom: 0; }
+.invite-card-stats strong { color: var(--deep-orange); font-size: 25px; }
+.invite-card-stats small { color: #856d60; font-size: 10px; }
+.invite-history { position: relative; z-index: 1; display: flex; flex-wrap: wrap; grid-column: 1 / -1; gap: 8px 16px; margin-top: 15px; padding-top: 13px; border-top: 1px solid #efc7b3; color: #856d60; font-size: 10px; }
+.invite-history b { color: var(--deep-orange); }
+.invite-policy { position: relative; z-index: 1; grid-column: 1 / -1; color: #9a8174; font-size: 9px; }
+.invite-register-note { margin-top: 13px; padding: 9px 10px; border-radius: 8px; background: #fff0e7; color: var(--deep-orange); font-size: 10px; line-height: 1.5; }
 .auth-modal { width: min(440px, 100%); }
 .auth-switch { display: flex; gap: 4px; margin: 18px 0 15px; padding: 4px; border-radius: 9px; background: #f5e9e2; }
 .auth-switch button { flex: 1; padding: 8px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; }
@@ -603,6 +620,13 @@ h1 em { color: var(--orange); font-style: normal; }
   .career-material-heading { align-items: start; flex-direction: column; gap: 5px; }
   .career-material-heading small { display: block; margin: 4px 0 0; }
   .career-deliverables > div { grid-template-columns: 78px minmax(0, 1fr); }
+  .invite-card { display: block; margin-top: 25px; padding: 23px 18px; }
+  .invite-card-stats { grid-template-columns: repeat(3, 1fr); margin-top: 20px; border-top: 1px solid #efc7b3; border-left: 0; }
+  .invite-card-stats span { padding: 13px 8px 8px 0; border-right: 1px solid #f1d8cb; border-bottom: 0; }
+  .invite-card-stats span:last-child { border-right: 0; }
+  .invite-card-stats strong { font-size: 19px; }
+  .invite-link-box { align-items: stretch; flex-direction: column; padding: 10px; }
+  .invite-link-box span { padding: 0; white-space: normal; word-break: break-all; }
   .modal:has(.course-center-content), .modal:has(.skill-gallery-content), .modal:has(.skill-detail-content) { padding: 25px 18px 18px; }
   .course-center-grid, .skill-gallery-grid { grid-template-columns: 1fr; }
   .skill-recommendation { align-items: start; flex-wrap: wrap; }

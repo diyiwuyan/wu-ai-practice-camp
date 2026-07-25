@@ -46,9 +46,9 @@ export async function requestAuthCode(email, name = '') {
   }
 }
 
-export async function verifyAuthCode(email, code, name = '') {
+export async function verifyAuthCode(email, code, name = '', inviteCode = '') {
   try {
-    const payload = await request('/auth/verify-code', { method: 'POST', body: JSON.stringify({ email, code, name }) })
+    const payload = await request('/auth/verify-code', { method: 'POST', body: JSON.stringify({ email, code, name, inviteCode }) })
     if (payload.user) writeJson(STORAGE.session, payload.user)
     return payload
   } catch (error) {
@@ -58,7 +58,8 @@ export async function verifyAuthCode(email, code, name = '') {
     if (!saved || saved.email !== email || saved.code !== code || saved.expiresAt < Date.now()) throw new Error('验证码错误或已过期')
     const users = readJson(STORAGE.users, [])
     const existing = users.find((item) => item.email === email)
-    const user = existing || { id: 'demo-' + Date.now(), email, name: name || email.split('@')[0], role: email === 'diyiwuyan@163.com' ? 'admin' : 'learner', points: 0, unlockedCourses: [], createdAt: new Date().toISOString() }
+    const inviter = !existing && inviteCode ? users.find((item) => item.referralCode === inviteCode) : null
+    const user = existing || { id: 'demo-' + Date.now(), email, name: name || email.split('@')[0], role: email === 'diyiwuyan@163.com' ? 'admin' : 'learner', points: 0, unlockedCourses: [], referralCode: 'WU' + Math.random().toString(36).slice(2, 10).toUpperCase(), invitedBy: inviter?.id || null, referralEarned: 0, createdAt: new Date().toISOString() }
     user.points = Number(user.points || 0)
     user.unlockedCourses = user.unlockedCourses || []
     writeJson(STORAGE.users, [...users.filter((item) => item.email !== email), user])
@@ -77,6 +78,17 @@ export async function getSession() {
       return user ? { ...user, points: Number(user.points || 0), unlockedCourses: user.unlockedCourses || [] } : null
     }
     return null
+  }
+}
+
+export async function getReferralSummary() {
+  try { return await request('/referrals') } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) throw error
+    const current = readJson(STORAGE.session, null)
+    if (!current) throw new Error('请先登录')
+    const users = readJson(STORAGE.users, [])
+    const invited = users.filter((item) => item.invitedBy === current.id)
+    return { referralCode: current.referralCode, invitedCount: invited.length, earnedPoints: Number(current.referralEarned || 0), rate: 0.3, transactions: [], demo: true }
   }
 }
 
@@ -153,11 +165,12 @@ export async function unlockCourse(courseId, price = 49.9) {
     const unlockedCourses = current.unlockedCourses || []
     if (unlockedCourses.includes(courseId)) return { ok: true, alreadyUnlocked: true, user: current, demo: true }
     if (Number(current.points || 0) < price) throw new Error(`积分不足，需要 ${price} 积分`)
+    const reward = current.invitedBy ? Math.round(price * 0.3 * 100) / 100 : 0
     const user = { ...current, points: Number(current.points || 0) - price, unlockedCourses: [...new Set([...unlockedCourses, courseId])] }
     writeJson(STORAGE.session, user)
     const users = readJson(STORAGE.users, [])
-    writeJson(STORAGE.users, users.map((item) => item.id === user.id ? user : item))
-    return { ok: true, courseId, spentPoints: price, user, demo: true }
+    writeJson(STORAGE.users, users.map((item) => item.id === user.id ? user : item).map((item) => item.id === current.invitedBy ? { ...item, points: Number(item.points || 0) + reward, referralEarned: Number(item.referralEarned || 0) + reward } : item))
+    return { ok: true, courseId, spentPoints: price, referralReward: reward, user, demo: true }
   }
 }
 

@@ -1,5 +1,6 @@
 const SESSION_COOKIE = "wu_session";
 const SESSION_DAYS = 30;
+const REFERRAL_RATE = 0.30;
 
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
@@ -83,7 +84,8 @@ async function enrichUser(env, row) {
     const balance = await env.DB.prepare("SELECT balance FROM user_points WHERE user_id = ?").bind(row.id).first();
     points = Number(balance?.balance || 0);
   } catch { /* points table may not exist during a rolling deployment */ }
-  return { ...row, points, unlockedCourses };
+  const referral = await ensureReferralProfile(env, row.id);
+  return { ...row, points, referralCode: referral?.code || null, unlockedCourses };
 }
 
 async function getCoursePrice(env, courseId) {
@@ -91,6 +93,24 @@ async function getCoursePrice(env, courseId) {
     const row = await env.DB.prepare("SELECT points FROM course_prices WHERE course_id = ?").bind(courseId).first();
     return Number(row?.points || 49.9);
   } catch { return 49.9; }
+}
+
+function makeReferralCode() {
+  return "WU" + randomToken().slice(0, 8).toUpperCase();
+}
+
+async function ensureReferralProfile(env, userId, inviterId = null) {
+  try {
+    const existing = await env.DB.prepare("SELECT code, inviter_id AS inviterId FROM referral_profiles WHERE user_id = ?").bind(userId).first();
+    if (existing) return existing;
+    const safeInviter = inviterId && inviterId !== userId ? inviterId : null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const code = makeReferralCode();
+      const result = await env.DB.prepare("INSERT OR IGNORE INTO referral_profiles (user_id, code, inviter_id, created_at) VALUES (?, ?, ?, ?)").bind(userId, code, safeInviter, isoNow()).run();
+      if (result.meta?.changes) return { code, inviterId: safeInviter };
+    }
+  } catch { /* referral table may not exist during a rolling deployment */ }
+  return null;
 }
 
 function sessionCookie(token) {
@@ -136,6 +156,7 @@ async function handleApi(request, env, url) {
     const email = String(payload.email || "").trim().toLowerCase();
     const code = String(payload.code || "").trim();
     const name = String(payload.name || "").trim().slice(0, 40);
+    const inviteCode = String(payload.inviteCode || "").trim().toUpperCase();
     const record = await env.DB.prepare("SELECT * FROM otp_codes WHERE email = ?").bind(email).first();
     if (!record || record.expires_at < Date.now() || record.attempts >= 5 || (await sha256(code)) !== record.code_hash) {
       if (record) await env.DB.prepare("UPDATE otp_codes SET attempts = attempts + 1 WHERE email = ?").bind(email).run();
@@ -145,8 +166,15 @@ async function handleApi(request, env, url) {
     const id = crypto.randomUUID();
     const adminEmail = String(env.ADMIN_EMAIL || "").trim().toLowerCase();
     const role = adminEmail && email === adminEmail ? "admin" : "learner";
+    const existingUser = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
     await env.DB.prepare("INSERT INTO users (id, email, name, role, status, created_at) VALUES (?, ?, ?, ?, 'active', ?) ON CONFLICT(email) DO UPDATE SET name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE users.name END, role = CASE WHEN excluded.role = 'admin' THEN 'admin' ELSE users.role END").bind(id, email, name || email.split("@")[0], role, isoNow()).run();
     const user = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users WHERE email = ?").bind(email).first();
+    let inviterId = null;
+    if (!existingUser && inviteCode) {
+      const inviter = await env.DB.prepare("SELECT user_id AS userId FROM referral_profiles WHERE code = ?").bind(inviteCode).first().catch(() => null);
+      inviterId = inviter?.userId || null;
+    }
+    await ensureReferralProfile(env, user.id, inviterId);
     const sessionToken = randomToken();
     await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(await sha256(sessionToken), user.id, Date.now() + SESSION_DAYS * 86400 * 1000, isoNow()).run();
     return json({ ok: true, user: await enrichUser(env, user) }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
@@ -159,6 +187,16 @@ async function handleApi(request, env, url) {
   }
 
   if (request.method === "GET" && route === "me") return json({ user: await currentUser(request, env) });
+
+  if (request.method === "GET" && route === "referrals") {
+    const user = await currentUser(request, env);
+    if (!user) return json({ message: "请先登录" }, 401);
+    const profile = await env.DB.prepare("SELECT code FROM referral_profiles WHERE user_id = ?").bind(user.id).first();
+    const invited = await env.DB.prepare("SELECT COUNT(*) AS count FROM referral_profiles WHERE inviter_id = ?").bind(user.id).first();
+    const earned = await env.DB.prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM point_transactions WHERE user_id = ? AND type = 'referral_reward'").bind(user.id).first();
+    const transactions = await env.DB.prepare("SELECT id, amount, reference_id AS referenceId, note, created_at AS createdAt FROM point_transactions WHERE user_id = ? AND type = 'referral_reward' ORDER BY created_at DESC LIMIT 50").bind(user.id).all();
+    return json({ referralCode: profile?.code || user.referralCode, invitedCount: Number(invited?.count || 0), earnedPoints: Number(earned?.total || 0), rate: REFERRAL_RATE, transactions: transactions.results || [] });
+  }
 
   if (request.method === "GET" && route === "points/transactions") {
     const user = await currentUser(request, env);
@@ -205,16 +243,26 @@ async function handleApi(request, env, url) {
     const now = isoNow();
     const debit = await env.DB.prepare("UPDATE user_points SET balance = balance - ?, updated_at = ? WHERE user_id = ? AND balance >= ?").bind(price, now, user.id, price).run();
     if (!debit.meta?.changes) return json({ message: "积分不足，请刷新账户后重试" }, 400);
+    const relationship = await env.DB.prepare("SELECT inviter_id AS inviterId FROM referral_profiles WHERE user_id = ?").bind(user.id).first().catch(() => null);
+    const reward = relationship?.inviterId ? Math.round(price * REFERRAL_RATE * 100) / 100 : 0;
     try {
-      await env.DB.batch([
+      const statements = [
         env.DB.prepare("INSERT INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), user.id, courseId, "points", now),
         env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'course_unlock', ?, ?, ?)").bind(crypto.randomUUID(), user.id, -price, courseId, `解锁课程：${courseId}`, now),
-      ]);
+      ];
+      if (relationship?.inviterId && reward > 0) {
+        statements.push(
+          env.DB.prepare("INSERT OR IGNORE INTO user_points (user_id, balance, updated_at) VALUES (?, 0, ?)").bind(relationship.inviterId, now),
+          env.DB.prepare("UPDATE user_points SET balance = balance + ?, updated_at = ? WHERE user_id = ?").bind(reward, now, relationship.inviterId),
+          env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'referral_reward', ?, ?, ?)").bind(crypto.randomUUID(), relationship.inviterId, reward, `${user.id}:${courseId}`, `邀请返利：被邀请人消费 ${price} 积分的 30%`, now),
+        );
+      }
+      await env.DB.batch(statements);
     } catch (error) {
       await env.DB.prepare("UPDATE user_points SET balance = balance + ?, updated_at = ? WHERE user_id = ?").bind(price, isoNow(), user.id).run();
       throw error;
     }
-    return json({ ok: true, courseId, spentPoints: price, user: await enrichUser(env, { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, createdAt: user.createdAt }) });
+    return json({ ok: true, courseId, spentPoints: price, referralReward: reward, user: await enrichUser(env, { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, createdAt: user.createdAt }) });
   }
 
   if (request.method === "POST" && route === "submissions") {
@@ -235,7 +283,7 @@ async function handleApi(request, env, url) {
   if (request.method === "GET" && route === "admin/dashboard") {
     const user = await currentUser(request, env);
     if (!user || user.role !== "admin") return json({ message: "无管理员权限" }, 403);
-    const users = await env.DB.prepare("SELECT users.id, users.email, users.name, users.role, users.status, users.created_at AS createdAt, COALESCE(user_points.balance, 0) AS points FROM users LEFT JOIN user_points ON user_points.user_id = users.id ORDER BY users.created_at DESC LIMIT 200").all();
+    const users = await env.DB.prepare("SELECT users.id, users.email, users.name, users.role, users.status, users.created_at AS createdAt, COALESCE(user_points.balance, 0) AS points, (SELECT COUNT(*) FROM referral_profiles AS invited WHERE invited.inviter_id = users.id) AS invitedCount, COALESCE((SELECT SUM(amount) FROM point_transactions WHERE point_transactions.user_id = users.id AND point_transactions.type = 'referral_reward'), 0) AS referralEarned FROM users LEFT JOIN user_points ON user_points.user_id = users.id ORDER BY users.created_at DESC LIMIT 200").all();
     const entitlements = await env.DB.prepare("SELECT user_id AS userId, course_id AS courseId FROM course_entitlements ORDER BY granted_at DESC").all().catch(() => ({ results: [] }));
     const unlockedByUser = (entitlements.results || []).reduce((map, item) => {
       map[item.userId] = [...(map[item.userId] || []), item.courseId];
