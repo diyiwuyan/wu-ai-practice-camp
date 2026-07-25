@@ -20,6 +20,8 @@ import {
 } from '@phosphor-icons/react'
 import { freeCourseGroups, freeCourseStats } from './courseContent'
 import { hydrateCourseEmbeds } from './courseEmbeds'
+import { imageCourseGroups, imageCoursePrompts, imageCourseStats } from './imageCourseContent'
+import { createSubmission, getAdminDashboard, getSession, isDemoAuth, logout, requestAuthCode, reviewSubmission, verifyAuthCode } from './community'
 
 const cases = [
   {
@@ -127,6 +129,93 @@ function PaidCourseModal({ course, onClose, onNotify }) {
   )
 }
 
+function ImageCourseModal({ onNotify }) {
+  const chapters = imageCourseGroups.flatMap((group) => group.chapters)
+  const [selected, setSelected] = useState(chapters[0])
+  const [prompt, setPrompt] = useState(imageCoursePrompts[0])
+  return (
+    <div className="course-modal-content image-course-content">
+      <div className="course-modal-heading">
+        <div>
+          <span className="modal-icon"><Sparkle size={26} /></span>
+          <p className="eyebrow orange"><span /> 付费课程 · 正在建设</p>
+          <h2>AI 生图工作流训练营</h2>
+          <p>从平台和模型选型，到分行业提示词，再到系列素材和交付验收，练出一套真正能用于工作和作品集的生图方法。</p>
+        </div>
+        <div className="course-modal-stats">{imageCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>
+      </div>
+      <div className="course-modal-layout">
+        <div className="course-chapter-list image-course-list">
+          {imageCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}
+        </div>
+        <article className="course-detail image-course-detail">
+          <span className="course-detail-number">第 {selected.number} 章</span>
+          <h3>{selected.title}</h3>
+          <p className="course-detail-intro">{selected.intro}</p>
+          <div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div>
+          <div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>
+          <div className="prompt-library">
+            <div className="prompt-library-heading"><b>分行业提示词模板</b><select value={prompt.label} onChange={(event) => setPrompt(imageCoursePrompts.find((item) => item.label === event.target.value) || imageCoursePrompts[0])}>{imageCoursePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div>
+            <code>{prompt.prompt}</code>
+            <button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('提示词模板已复制') }}>复制模板 <ArrowRight size={15} /></button>
+          </div>
+          <div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下过程稿、提示词和验收记录，最后组成自己的作品集。</div>
+        </article>
+      </div>
+    </div>
+  )
+}
+
+function AuthModal({ initialMode = 'login', onClose, onAuthenticated, onNotify }) {
+  const [mode, setMode] = useState(initialMode)
+  const [step, setStep] = useState('email')
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const sendCode = async () => {
+    if (!email.includes('@')) { setMessage('请先输入有效邮箱'); return }
+    setBusy(true)
+    try {
+      const result = await requestAuthCode(email, name)
+      setMessage(result.message || '验证码已发送，请检查邮箱')
+      setStep('code')
+    } catch (error) { setMessage(error.message) } finally { setBusy(false) }
+  }
+
+  const verifyCode = async () => {
+    setBusy(true)
+    try {
+      const result = await verifyAuthCode(email, code, name)
+      onAuthenticated(result.user)
+      onNotify(result.demo ? '本地演示账号已登录' : '登录成功')
+      onClose()
+    } catch (error) { setMessage(error.message) } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}><div className="modal auth-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose} aria-label="关闭"><X size={22} /></button><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 邮箱登录</p><h2>{mode === 'login' ? '回来继续学习' : '加入武同学AI实践营'}</h2><p>{mode === 'login' ? '登录后同步学习进度、收藏和投稿记录。' : '用邮箱注册，参与课程学习和社区共创。'}</p><div className="auth-switch"><button className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setStep('email'); setMessage('') }}>登录</button><button className={mode === 'register' ? 'active' : ''} onClick={() => { setMode('register'); setStep('email'); setMessage('') }}>注册</button></div>{step === 'email' ? <div className="auth-form">{mode === 'register' && <input value={name} onChange={(event) => setName(event.target.value)} placeholder="你的昵称（可选）" /> }<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="name@example.com" autoComplete="email" /><button className="button button-primary full" disabled={busy} onClick={sendCode}>{busy ? '发送中…' : '发送邮箱验证码'}</button></div> : <div className="auth-form"><input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" maxLength={6} placeholder="输入 6 位验证码" autoComplete="one-time-code" /><button className="button button-primary full" disabled={busy} onClick={verifyCode}>{busy ? '验证中…' : '验证并进入'}</button><button className="text-link auth-resend" onClick={() => setStep('email')}>换个邮箱或重新发送</button></div>}{message && <div className="auth-message">{message}</div>}{isDemoAuth() && <small className="auth-demo-note">当前是本地预览模式，验证码会显示在这里；正式部署后将发送到邮箱。</small>}</div></div>
+  )
+}
+
+function ContributionModal({ user, onClose, onLogin, onNotify }) {
+  const [form, setForm] = useState({ title: '', category: '实战案例', description: '', prompt: '', assetUrl: '' })
+  const [busy, setBusy] = useState(false)
+  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  const submit = async () => {
+    if (!form.title.trim() || !form.description.trim()) { onNotify('请填写标题和案例说明'); return }
+    setBusy(true)
+    try { await createSubmission(form); onClose(); onNotify('投稿已提交，等待管理员审核') } catch (error) { onNotify(error.message) } finally { setBusy(false) }
+  }
+  return <div className="modal contribution-modal" role="dialog" aria-modal="true"><button className="modal-close" onClick={onClose} aria-label="关闭"><X size={22} /></button><span className="modal-icon"><Plus size={26} /></span><p className="eyebrow orange"><span /> 学员共创</p><h2>分享你的工作流</h2><p>{user ? '投稿人：' + (user.name || user.email) : '登录后才能提交投稿，内容会先进入管理员审核。'}</p>{user ? <div className="contribution-form"><input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="投稿标题，例如：用 AI 做一份周报" /><select value={form.category} onChange={(event) => update('category', event.target.value)}><option>实战案例</option><option>Skill</option><option>Prompt</option><option>知识卡片</option></select><textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="你解决了什么问题？具体怎么做？最后得到什么结果？" /><textarea value={form.prompt} onChange={(event) => update('prompt', event.target.value)} placeholder="可选：贴出 Prompt、步骤或关键配置" /><input value={form.assetUrl} onChange={(event) => update('assetUrl', event.target.value)} placeholder="可选：成品图片或文件链接" /><button className="button button-primary full" disabled={busy} onClick={submit}>{busy ? '提交中…' : '提交投稿'}</button></div> : <button className="button button-primary full" onClick={() => { onClose(); onLogin() }}>先去登录</button>}</div>
+}
+
+function AdminPanel({ data, loading, onRefresh, onReview, onClose }) {
+  return <div className="modal-backdrop" onClick={onClose}><div className="modal admin-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={onClose} aria-label="关闭"><X size={22} /></button><div className="admin-heading"><div><p className="eyebrow orange"><span /> 管理员工作台</p><h2>社区运营中心</h2><p>查看用户、处理投稿、维护社区内容状态。</p></div><button className="button button-outline small" onClick={onRefresh}>刷新数据</button></div>{loading ? <div className="course-reader-loading">正在读取管理数据…</div> : <><div className="admin-stats"><span><strong>{data?.stats?.users || 0}</strong><small>用户</small></span><span><strong>{data?.stats?.submissions || 0}</strong><small>投稿</small></span><span><strong>{data?.stats?.pending || 0}</strong><small>待审核</small></span></div><section className="admin-section"><h3>投稿审核</h3>{data?.submissions?.length ? <div className="admin-table">{data.submissions.map((item) => <article key={item.id}><div><b>{item.title}</b><small>{item.author || item.authorEmail || '匿名'} · {item.category} · {item.status === 'pending' ? '待审核' : item.status === 'approved' ? '已通过' : '已拒绝'}</small><p>{item.description}</p></div><div className="admin-actions"><button className="button button-primary small" disabled={item.status === 'approved'} onClick={() => onReview(item.id, 'approved')}>通过</button><button className="button button-outline small" disabled={item.status === 'rejected'} onClick={() => onReview(item.id, 'rejected')}>退回</button></div></article>)}</div> : <div className="course-empty">目前还没有投稿。</div>}</section><section className="admin-section"><h3>最近用户</h3><div className="admin-user-list">{(data?.users || []).slice(0, 8).map((item) => <span key={item.id}>{item.name || '未命名'} · {item.email} · {item.role === 'admin' ? '管理员' : '学员'}</span>)}</div></section></>}</div></div>
+}
+
 const allChapters = freeCourseGroups.flatMap((group) => group.chapters)
 
 function CourseReader({ chapter, details, loadError, completedChapters, onBack, onPrevious, onNext, onComplete }) {
@@ -191,6 +280,10 @@ export function App() {
   })
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState('')
+  const [session, setSession] = useState(null)
+  const [authMode, setAuthMode] = useState(null)
+  const [adminData, setAdminData] = useState(null)
+  const [adminLoading, setAdminLoading] = useState(false)
   const [courseDetails, setCourseDetails] = useState(null)
   const [courseLoadError, setCourseLoadError] = useState(false)
   const [selectedChapter, setSelectedChapter] = useState(freeCourseGroups[0].chapters[0])
@@ -200,6 +293,7 @@ export function App() {
 
   useEffect(() => { window.localStorage.setItem('wu-ai-saved-cases', JSON.stringify(saved)) }, [saved])
   useEffect(() => { window.localStorage.setItem('wu-ai-completed-chapters', JSON.stringify(completedChapters)) }, [completedChapters])
+  useEffect(() => { getSession().then(setSession).catch(() => setSession(null)) }, [])
   useEffect(() => {
     if (modal === 'reader') document.querySelector('.course-reader-modal .course-reader-main')?.scrollTo({ top: 0, behavior: 'auto' })
   }, [modal, selectedChapter.number])
@@ -245,6 +339,17 @@ export function App() {
     setCompletedChapters((current) => current.includes(selectedChapter.number) ? current : [...current, selectedChapter.number])
     notify(`第 ${selectedChapter.number} 章已完成，继续保持`)
   }
+  const openAdmin = async () => {
+    setAdminLoading(true)
+    try { setAdminData(await getAdminDashboard()) } catch (error) { notify(error.message) } finally { setAdminLoading(false) }
+  }
+  const refreshAdmin = async () => {
+    setAdminLoading(true)
+    try { setAdminData(await getAdminDashboard()) } catch (error) { notify(error.message) } finally { setAdminLoading(false) }
+  }
+  const handleReview = async (id, status) => {
+    try { await reviewSubmission(id, status); await refreshAdmin(); notify(status === 'approved' ? '投稿已通过' : '投稿已退回') } catch (error) { notify(error.message) }
+  }
 
   return (
     <div className="app-shell">
@@ -270,8 +375,7 @@ export function App() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索案例、Skill、课程" />
           </label>
           <button className="icon-button" aria-label="通知" onClick={() => notify('目前没有新的通知')}><Bell size={20} /></button>
-          <button className="button button-outline small" onClick={() => setModal('signup')}>登录</button>
-          <button className="button button-primary small" onClick={() => setModal('signup')}>注册</button>
+          {session ? <div className="session-actions"><span className="session-name">{session.name || session.email}</span>{session.role === 'admin' && <button className="button button-outline small" onClick={openAdmin}>管理后台</button>}<button className="button button-primary small" onClick={async () => { await logout(); setSession(null); notify('已退出登录') }}>退出</button></div> : <><button className="button button-outline small" onClick={() => setAuthMode('login')}>登录</button><button className="button button-primary small" onClick={() => setAuthMode('register')}>注册</button></>}
         </div>
       </header>
 
@@ -352,7 +456,7 @@ export function App() {
           <div className="learning-cards">
             <button className="learning-card featured" onClick={openCourse}><span className="course-label">免费课程</span><h3>WorkBuddy 免费实战课</h3><p>35 章完整内容，带你从安装、任务、Skill、实战案例到自己的 AI 工作系统</p><div className="progress"><span style={{ width: `${Math.max(8, Math.round((completedChapters.length / allChapters.length) * 100))}%` }} /></div><small>{completedChapters.length ? `已完成 ${completedChapters.length}/${allChapters.length} 章 · 继续学习` : '查看完整目录，开始第一章'} <ArrowRight size={16} /></small></button>
             <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: 'Codex 橙皮书', description: '从 0 到 1 掌握 AI 编程思维、代码协作和可交付的软件工作流。适合想把 AI 从聊天工具用成编程搭档的同学。', audience: 'AI 编程入门', duration: '建议 6 周', status: '付费课程模块', outputs: ['一套可复用的 Codex 工作流', '从需求到交付的项目练习', '代码审查与迭代检查表'], syllabus: ['任务拆解与上下文准备', '从原型到可运行产品', '调试、验证与发布'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>Codex 橙皮书</h3><p>从 0 到 1 掌握 AI 编程思维与实战方法</p><small>了解课程 <ArrowRight size={16} /></small></button>
-            <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: 'image2 生图训练营', description: '从提示词、参考图到批量生产，建立可复用的视觉内容工作流，适合内容创作者、运营和品牌团队。', audience: 'AI 视觉创作', duration: '建议 4 周', status: '付费课程模块', outputs: ['一套个人生图提示词模板', '从创意到成片的生产流程', '适合发布的封面与配图素材'], syllabus: ['画面拆解与风格控制', '参考图、构图和一致性', '批量生产与内容发布'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>image2 生图训练营</h3><p>系统掌握 AI 生图技巧与工作流</p><small>了解课程 <ArrowRight size={16} /></small></button>
+            <button className="learning-card" onClick={() => setModal('image-course')}><span className="course-label paid">付费进阶</span><h3>AI 生图工作流训练营</h3><p>平台、模型、提示词与行业案例，练出可交付的视觉生产力</p><small>查看课程大纲 <ArrowRight size={16} /></small></button>
             <button className="learning-card" onClick={() => setModal({ kind: 'paid-course', course: { title: '大学生求职 AI 课', description: '把 AI 用到求职全流程：方向梳理、简历优化、岗位研究、面试准备和作品集表达，帮助你把准备工作做得更具体。', audience: '大学生与应届生', duration: '建议 3 周', status: '付费课程模块', outputs: ['一份岗位匹配简历', '一套面试问答与复盘卡', '一份可展示的求职作品集'], syllabus: ['目标岗位与优势定位', '简历、作品集和投递策略', '面试模拟与复盘迭代'], cta: '预约课程更新' } })}><span className="course-label paid">付费进阶</span><h3>大学生求职 AI 课</h3><p>用 AI 完成从定位、简历到面试的求职闭环</p><small>了解课程 <ArrowRight size={16} /></small></button>
           </div>
         </section>
@@ -369,7 +473,9 @@ export function App() {
 
       <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills">Skill 广场</a><a href="#community">学员共创</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <><span className="modal-icon"><Plus size={26} /></span><h2>分享你的工作流</h2><p>下一版将支持上传案例、Skill、Prompt 和配套文件。产品投稿审核上线后会正式开放。</p><textarea placeholder="你最想分享什么 AI 工作方法？" /><button className="button button-primary full" onClick={() => { setModal(null); notify('已记录投稿想法，审核入口上线后会通知你') }}>提交想法</button></> : modal === 'signup' ? <><span className="modal-icon"><UserCircle size={26} /></span><h2>加入武同学AI实践营</h2><p>注册后可以记录学习进度、收藏案例，并参与社区共创。</p><button className="button button-primary full" onClick={() => { setModal(null); notify('账号系统正在接入，当前可先用本机保存学习进度') }}>继续注册</button></> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'image-course' ? <ImageCourseModal onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {authMode && <AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} onAuthenticated={setSession} onNotify={notify} />}
+      {adminData && session?.role === 'admin' && <AdminPanel data={adminData} loading={adminLoading} onRefresh={refreshAdmin} onReview={handleReview} onClose={() => setAdminData(null)} />}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}
     </div>
   )
