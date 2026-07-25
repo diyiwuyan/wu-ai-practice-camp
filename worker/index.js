@@ -49,7 +49,13 @@ async function currentUser(request, env) {
   const row = await env.DB.prepare(
     "SELECT users.id, users.email, users.name, users.role, users.status, users.created_at AS createdAt FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'",
   ).bind(tokenHash, Date.now()).first();
-  return row || null;
+  if (!row) return null;
+  let unlockedCourses = [];
+  try {
+    const grants = await env.DB.prepare("SELECT course_id AS courseId FROM course_entitlements WHERE user_id = ? ORDER BY granted_at DESC").bind(row.id).all();
+    unlockedCourses = (grants.results || []).map((item) => item.courseId);
+  } catch { /* entitlement table may not exist until the next schema migration */ }
+  return { ...row, unlockedCourses };
 }
 
 function sessionCookie(token) {
@@ -108,7 +114,12 @@ async function handleApi(request, env, url) {
     const user = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users WHERE email = ?").bind(email).first();
     const sessionToken = randomToken();
     await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(await sha256(sessionToken), user.id, Date.now() + SESSION_DAYS * 86400 * 1000, isoNow()).run();
-    return json({ ok: true, user }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
+    let unlockedCourses = [];
+    try {
+      const grants = await env.DB.prepare("SELECT course_id AS courseId FROM course_entitlements WHERE user_id = ? ORDER BY granted_at DESC").bind(user.id).all();
+      unlockedCourses = (grants.results || []).map((item) => item.courseId);
+    } catch { /* entitlement table may not exist until the next schema migration */ }
+    return json({ ok: true, user: { ...user, unlockedCourses } }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
   }
 
   if (request.method === "POST" && route === "auth/logout") {
@@ -138,9 +149,26 @@ async function handleApi(request, env, url) {
     const user = await currentUser(request, env);
     if (!user || user.role !== "admin") return json({ message: "无管理员权限" }, 403);
     const users = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users ORDER BY created_at DESC LIMIT 200").all();
+    const entitlements = await env.DB.prepare("SELECT user_id AS userId, course_id AS courseId FROM course_entitlements ORDER BY granted_at DESC").all().catch(() => ({ results: [] }));
+    const unlockedByUser = (entitlements.results || []).reduce((map, item) => {
+      map[item.userId] = [...(map[item.userId] || []), item.courseId];
+      return map;
+    }, {});
+    const usersWithCourses = (users.results || []).map((item) => ({ ...item, unlockedCourses: unlockedByUser[item.id] || [] }));
     const submissions = await env.DB.prepare("SELECT submissions.*, users.email AS authorEmail, users.name AS author FROM submissions JOIN users ON users.id = submissions.user_id ORDER BY submissions.created_at DESC LIMIT 200").all();
     const stats = await env.DB.prepare("SELECT COUNT(*) AS submissions, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending FROM submissions").first();
-    return json({ users: users.results || [], submissions: submissions.results || [], stats: { users: (users.results || []).length, submissions: Number(stats?.submissions || 0), pending: Number(stats?.pending || 0) } });
+    return json({ users: usersWithCourses, submissions: submissions.results || [], stats: { users: usersWithCourses.length, submissions: Number(stats?.submissions || 0), pending: Number(stats?.pending || 0) } });
+  }
+
+  const grantMatch = route.match(/^admin\/users\/([^/]+)\/courses$/);
+  if (request.method === "POST" && grantMatch) {
+    const user = await currentUser(request, env);
+    if (!user || user.role !== "admin") return json({ message: "无管理员权限" }, 403);
+    const payload = await body(request);
+    const courseId = ["codex", "image", "career"].includes(payload.courseId) ? payload.courseId : "";
+    if (!courseId) return json({ message: "课程编号无效" }, 400);
+    await env.DB.prepare("INSERT OR IGNORE INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), grantMatch[1], courseId, user.id, isoNow()).run();
+    return json({ ok: true, courseId });
   }
 
   const adminMatch = route.match(/^admin\/submissions\/([^/]+)$/);

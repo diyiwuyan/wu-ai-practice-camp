@@ -39,3 +39,13 @@ CREATE TABLE IF NOT EXISTS submissions (
 CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
 CREATE INDEX IF NOT EXISTS idx_submissions_created_at ON submissions(created_at);
 
+CREATE TABLE IF NOT EXISTS course_entitlements (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  course_id TEXT NOT NULL,
+  granted_by TEXT,
+  granted_at TEXT NOT NULL,
+  UNIQUE(user_id, course_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_entitlements_user ON course_entitlements(user_id);

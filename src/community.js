@@ -110,3 +110,15 @@ export async function reviewSubmission(id, status, note = '') {
     return { ok: true, submission: updated.find((item) => item.id === id), demo: true }
   }
 }
+
+export async function grantCourse(userId, courseId) {
+  try { return await request('/admin/users/' + userId + '/courses', { method: 'POST', body: JSON.stringify({ courseId }) }) } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) throw error
+    const users = readJson(STORAGE.users, [])
+    const updated = users.map((item) => item.id === userId ? { ...item, unlockedCourses: [...new Set([...(item.unlockedCourses || []), courseId])] } : item)
+    writeJson(STORAGE.users, updated)
+    const current = readJson(STORAGE.session, null)
+    if (current?.id === userId) writeJson(STORAGE.session, { ...current, unlockedCourses: [...new Set([...(current.unlockedCourses || []), courseId])] })
+    return { ok: true, courseId, demo: true }
+  }
+}

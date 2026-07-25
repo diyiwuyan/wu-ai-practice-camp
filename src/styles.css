@@ -330,6 +330,14 @@ h1 em { color: var(--orange); font-style: normal; }
 .enrollment-contact b { display: block; margin-bottom: 5px; color: var(--deep-orange); font-size: 12px; }
 .enrollment-contact p { margin: 0 0 5px !important; color: #755f53 !important; font-size: 11px !important; line-height: 1.55 !important; }
 .enrollment-contact small { display: block; color: #856d60; font-size: 9px; line-height: 1.5; }
+.course-lock-note { display: grid; grid-template-columns: 22px 1fr; gap: 7px 9px; margin: 20px 0; padding: 15px; border: 1px dashed #e9b092; border-radius: 11px; background: #fffaf7; color: #856d60; }
+.course-lock-note svg { grid-row: span 2; color: var(--orange); }
+.course-lock-note b { color: var(--deep-orange); font-size: 12px; }
+.course-lock-note p { margin: 0 !important; color: #856d60 !important; font-size: 11px !important; line-height: 1.6 !important; }
+.course-unlocked-note { display: flex; align-items: center; gap: 7px; margin-top: 18px; padding: 11px 13px; border-radius: 9px; background: #eaf7ef; color: #2e8b62; font-size: 11px; font-weight: 800; }
+.career-course-content { width: min(980px, 100%); }
+.career-course-list { max-height: 520px; }
+.career-course-detail { min-height: 100%; }
 .auth-modal { width: min(440px, 100%); }
 .auth-switch { display: flex; gap: 4px; margin: 18px 0 15px; padding: 4px; border-radius: 9px; background: #f5e9e2; }
 .auth-switch button { flex: 1; padding: 8px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; }
@@ -452,4 +460,5 @@ h1 em { color: var(--orange); font-style: normal; }
   .enrollment-price { grid-template-columns: auto auto; }
   .enrollment-price small { grid-column: 1 / -1; }
   .enrollment-contact { align-items: start; }
+  .career-course-content { width: 100%; }
 }

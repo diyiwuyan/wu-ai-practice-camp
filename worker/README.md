@@ -9,6 +9,8 @@ wrangler d1 create wu-ai-practice-camp-db
 wrangler d1 execute wu-ai-practice-camp-db --remote --file=worker/schema.sql
 ```
 
+如果数据库已经按旧版结构创建过，请单独执行一次课程权限迁移（`schema.sql` 中的最后两段 `course_entitlements` 建表和索引语句），否则管理员解锁按钮无法写入权限。
+
 在 Worker 的绑定配置中把数据库绑定名设为 `DB`，静态资源绑定名设为 `ASSETS`。
 
 ## 2. 配置邮箱
@@ -31,6 +33,10 @@ UPDATE users SET role = 'admin' WHERE email = '你的管理员邮箱';
 ```
 
 管理员重新登录后，前端顶部会出现“管理后台”，可以查看用户、查看投稿并通过或退回投稿。
+
+管理员确认收到手动报名款后，可以在“最近用户与课程解锁”中给用户解锁 Codex 橙皮书、生图训练营或大学生求职 AI 课。解锁后用户重新打开课程，课程状态会显示“已解锁”，并看到完整的 Prompt、练习、示例和课程正文；未解锁用户只看到课程介绍、统计和目录预览。
+
+课程权限写入 `course_entitlements` 表，当前支持的课程编号为 `codex`、`image`、`career`。权限是整门课程权限，生图课和求职课都不是按章节收费。
 
 当前登录方式是邮箱验证码，不保存密码；不要把个人密码写入 Worker 变量、代码或仓库。
 
