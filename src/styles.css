@@ -357,6 +357,8 @@ h1 em { color: var(--orange); font-style: normal; }
 .modal-course-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .modal-course-meta span { padding: 6px 9px; border-radius: 99px; background: var(--pale-orange); color: var(--deep-orange); font-size: 11px; }
 .paid-course-modal { width: min(610px, 100%); }
+.modal:has(.paid-course-content) { width: min(760px, 100%); max-height: min(820px, calc(100vh - 40px)); overflow: auto; padding: 30px; }
+.paid-course-content { display: grid; gap: 14px; }
 .paid-course-content .eyebrow { margin-bottom: 9px; }
 .paid-course-content > h2 { margin-bottom: 10px; }
 .paid-course-content > p:not(.eyebrow) { margin-bottom: 16px; }
@@ -421,6 +423,10 @@ h1 em { color: var(--orange); font-style: normal; }
 .promptcard-source-note { display: block; margin-top: 10px; color: #9b8172; font-size: 9px; line-height: 1.5; }
 .paid-chapter-outline { margin: 20px 0; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .paid-chapter-outline > b { display: block; margin-bottom: 10px; color: var(--deep-orange); font-size: 12px; }
+.paid-outline-group + .paid-outline-group { margin-top: 13px; padding-top: 13px; border-top: 1px solid #f0e1d8; }
+.paid-outline-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.paid-outline-heading strong { color: #5a4033; font-size: 11px; }
+.paid-outline-heading span { color: var(--deep-orange); font-size: 9px; white-space: nowrap; }
 .paid-chapter-outline ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .paid-chapter-outline li { display: grid; grid-template-columns: 27px minmax(0, 1fr); gap: 9px; align-items: center; }
 .paid-chapter-outline li > span { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 7px; background: var(--pale-orange); color: var(--deep-orange); font-size: 10px; font-weight: 900; }
@@ -648,6 +654,7 @@ h1 em { color: var(--orange); font-style: normal; }
   .course-markdown img { max-width: 100%; }
   .course-reader-footer { flex-wrap: wrap; padding: 15px 18px 18px; }
   .course-reader-footer .course-reader-complete { order: -1; width: 100%; justify-content: center; }
+  .modal:has(.paid-course-content) { padding: 25px 18px 18px; }
   .paid-course-grid { grid-template-columns: 1fr; }
   .session-actions { gap: 4px; }
   .session-name { display: none; }

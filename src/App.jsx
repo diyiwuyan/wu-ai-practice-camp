@@ -71,40 +71,52 @@ const cases = [
 
 const skills = skillCatalog
 
+const codexOutlineGroups = [
+  { label: '0. 使用说明', items: ['重要声明', '这份手册适合谁', '阅读路线'] },
+  { label: '第一篇：先搞懂 Codex 是什么', items: ['Codex 基础认知', 'Codex 的使用入口'] },
+  { label: '第二篇：安装、配置与环境准备', items: ['安装前准备', 'Codex App 安装与上手', 'Codex CLI 安装与上手', 'Codex IDE Extension', 'Codex Web'] },
+  { label: '第三篇：核心功能详解', items: ['自动化', '插件', 'Skill', 'MCP', '代码管理（Git 与 GitHub 工作流）', '云端运行', '记忆系统'] },
+  { label: '第四篇：标准工作流', items: ['从需求到交付的完整链路', 'Codex 任务模板库'] },
+  { label: '第五篇：实战案例库', items: ['实战案例一：制作宠物零食售卖的前端页面网站', '实战案例二：给宠物零食网站增加功能和优化页面', '实战案例三：制作宠物零食的管理后台', '实战案例四：制作宠物零食品牌招商 PPT', '实战案例五：制作宠物零食宣传视频'] },
+  { label: '附录 A：第三方模型接入', items: ['第三方模型接入与使用边界'] },
+]
+
 const paidCourses = {
   codex: {
     id: 'codex',
     title: 'Codex 橙皮书',
-    description: '从 0 到 1 掌握 AI 编程思维、代码协作和可交付的软件工作流。',
-    audience: 'AI 编程入门', duration: '建议 6 周', status: '付费课程', label: '付费进阶', cover: 'assets/course-cover-codex.png', benefit: '把一个想法做成可运行、可验证、可发布的产品',
+    description: '按橙皮书的五篇主线，从认识 Codex、安装配置、核心能力到标准工作流，再用 5 个真实项目案例练到交付。',
+    audience: 'AI 编程入门', duration: '建议 6 周', status: '积分课程', label: '积分解锁', cover: 'assets/course-cover-codex.png', benefit: '把一个想法做成可运行、可验证、可发布的产品',
     price: { original: 199, sale: 49.9 },
-    outputs: ['一套可复用的 Codex 工作流', '从需求到交付的项目练习', '代码审查与迭代检查表'],
-    syllabus: ['任务拆解与上下文准备', '从原型到可运行产品', '调试、验证与发布'],
-    chapters: ['需求拆解与工作区准备', '从原型到可运行页面', '读代码、改代码与调试', '测试、验收与版本迭代', '部署上线与项目复盘'],
-    cta: '报名并查看优惠价',
+    stats: [['5篇', '主线内容'], ['5个', '实战案例'], ['25', '个主题']],
+    outputs: ['一套从安装到交付的 Codex 工作流', '5 个宠物零食项目实战案例', '任务模板、验收清单和复盘方法'],
+    syllabus: ['认识 Codex 与使用入口', 'App、CLI、IDE、Web 安装配置', '自动化、Skill、MCP、Git 与记忆系统', '从需求到交付的标准工作流'],
+    outlineGroups: codexOutlineGroups,
+    chapters: codexOutlineGroups.flatMap((group) => group.items),
+    cta: '使用积分解锁',
   },
   image: {
     id: 'image',
     title: 'AI 生图工作流训练营',
     description: '从平台和模型选型，到提示词规范、行业案例、系列素材、图片转提示词插件和交付验收，练出一套可复用的视觉生产方法。',
-    audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '付费课程', label: '付费进阶', cover: 'assets/image-example-course-poster.png', benefit: '独立完成一套可发布、可复用的视觉素材',
+    audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '积分课程', label: '积分解锁', cover: 'assets/image-example-course-poster.png', benefit: '独立完成一套可发布、可复用的视觉素材',
     price: { original: 199, sale: 49.9 },
     outputs: ['一套生图提示词规范', '30+ 个行业提示词模板', 'PromptCard 图片转提示词插件实操', '电商、内容、课程海报作品集'],
     syllabus: ['平台与模型选择', '提示词十段式与迭代规范', '行业案例与系列组图', 'PromptCard 安装、分析与改写', '作品集和商业交付'],
     chapters: imageCourseGroups.flatMap((group) => group.chapters.map((chapter) => chapter.title)),
-    cta: '报名并查看优惠价',
+    cta: '使用积分解锁',
   },
   career: {
     id: 'career',
     title: '大学生求职 AI 课',
     description: '把 AI 用到求职全流程：方向梳理、岗位研究、简历优化、作品集、投递、面试和 Offer 决策。',
-    audience: '大学生、应届生和转行初学者', duration: '建议 3 周', status: '付费课程', label: '付费进阶', cover: 'assets/course-cover-career.png', benefit: '拿到一套真实、可投递、可复盘的求职材料',
+    audience: '大学生、应届生和转行初学者', duration: '建议 3 周', status: '积分课程', label: '积分解锁', cover: 'assets/course-cover-career.png', benefit: '拿到一套真实、可投递、可复盘的求职材料',
     stats: careerCourseStats,
     price: { original: 199, sale: 49.9 },
     outputs: ['一份岗位定制简历', '一套求职证据库和作品集', '投递跟踪表、面试回答卡和复盘报告'],
     syllabus: ['岗位定位与 JD 拆解', '简历、项目和作品集', '投递策略与面试模拟', 'Offer 比较与入职准备'],
     chapters: careerCourseGroups.flatMap((group) => group.chapters.map((chapter) => chapter.title)),
-    cta: '报名并查看优惠价',
+    cta: '使用积分解锁',
   },
 }
 
@@ -245,7 +257,7 @@ function CourseCenterModal({ courses, onOpen }) {
   const normalizedKeyword = keyword.trim().toLowerCase()
   const filteredCourses = courses.filter((course) => [course.title, course.description, course.benefit, course.label].join(' ').toLowerCase().includes(normalizedKeyword))
   return <div className="course-center-content">
-    <div className="course-modal-heading"><div><span className="modal-icon"><FileText size={26} /></span><p className="eyebrow orange"><span /> 全部课程</p><h2>课程中心</h2><p>首页只展示精选课程，完整课程目录、价格和学习状态都在这里。后续新增课程也会统一进入课程中心。</p></div><div className="course-modal-stats"><span><strong>{courses.length}</strong><small>当前课程</small></span><span><strong>免费 + 付费</strong><small>学习方式</small></span></div></div>
+    <div className="course-modal-heading"><div><span className="modal-icon"><FileText size={26} /></span><p className="eyebrow orange"><span /> 全部课程</p><h2>课程中心</h2><p>首页只展示精选课程，完整课程目录、积分价格和学习状态都在这里。后续新增课程也会统一进入课程中心。</p></div><div className="course-modal-stats"><span><strong>{courses.length}</strong><small>当前课程</small></span><span><strong>免费 + 积分</strong><small>学习方式</small></span></div></div>
     <label className="course-center-search"><MagnifyingGlass size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索课程、结果或适合人群" /></label>
     <div className="course-center-grid">{filteredCourses.map((course) => <CourseCard key={course.id} course={course} onOpen={onOpen} />)}</div>
     {!filteredCourses.length && <div className="course-empty">没有找到匹配课程，试试搜索“生图”“求职”或“WorkBuddy”。</div>}
@@ -278,17 +290,18 @@ function PaidCourseModal({ course, unlocked, user, onLogin, onAuthenticated, onC
   return (
     <div className="paid-course-content">
       <span className="modal-icon"><Sparkle size={26} /></span>
-      <p className="eyebrow orange"><span /> 付费进阶课程</p>
+      <p className="eyebrow orange"><span /> 积分解锁课程</p>
       <h2>{course.title}</h2>
       <p>{course.description}</p>
-      <div className="modal-course-meta"><span>{course.audience}</span><span>{course.duration}</span><span>{unlocked ? '已解锁' : '已上线'}</span></div>
+      <div className="modal-course-meta"><span>{course.audience}</span><span>{course.duration}</span><span>{unlocked ? '已解锁' : '积分解锁'}</span></div>
       <div className="course-value"><b>学完你会</b><strong>{course.benefit}</strong></div>
       {course.stats && <div className="course-modal-stats paid-course-stats">{course.stats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>}
       <div className="paid-course-grid">
         <section><b>你会拿到什么</b><ul>{course.outputs.map((item) => <li key={item}>{item}</li>)}</ul></section>
         <section><b>课程重点</b><ul>{course.syllabus.map((item) => <li key={item}>{item}</li>)}</ul></section>
       </div>
-      {course.chapters?.length > 0 && <section className="paid-chapter-outline"><b>课程目录 · 共 {course.chapters.length} 节</b><ol>{course.chapters.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item}</strong><small>{unlocked ? '已解锁，可开始学习' : '报名后解锁本课程内容'}</small></div></li>)}</ol></section>}
+      {course.outlineGroups?.length > 0 && <section className="paid-chapter-outline"><b>橙皮书课程目录 · 5 篇主线 + 附录</b>{course.outlineGroups.map((group) => <div className="paid-outline-group" key={group.label}><div className="paid-outline-heading"><strong>{group.label}</strong><span>{group.items.length} 项</span></div><ol>{group.items.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item}</strong><small>{unlocked ? '已解锁，可开始学习' : '解锁后开始学习'}</small></div></li>)}</ol></div>)}</section>}
+      {!course.outlineGroups?.length && course.chapters?.length > 0 && <section className="paid-chapter-outline"><b>课程目录 · 共 {course.chapters.length} 节</b><ol>{course.chapters.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{item}</strong><small>{unlocked ? '已解锁，可开始学习' : '解锁后开始学习'}</small></div></li>)}</ol></section>}
       {unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 本课程已解锁，可以开始学习。</div> : <EnrollmentOffer course={course} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} />}
     </div>
   )
@@ -317,7 +330,7 @@ function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }
       <div className="course-modal-heading">
         <div>
           <span className="modal-icon"><Sparkle size={26} /></span>
-          <p className="eyebrow orange"><span /> 付费课程 · {unlocked ? '已解锁' : '已上线'}</p>
+          <p className="eyebrow orange"><span /> 积分课程 · {unlocked ? '已解锁' : '可解锁'}</p>
           <h2>AI 生图工作流训练营</h2>
           <p>从平台和模型选型，到分行业提示词，再到系列素材和交付验收，练出一套真正能用于工作和作品集的生图方法。</p>
           <div className="course-value"><b>学完你会</b><strong>{paidCourses.image.benefit}</strong></div>
@@ -349,7 +362,7 @@ function CareerCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify 
   const [selected, setSelected] = useState(chapters[0])
   const [prompt, setPrompt] = useState(careerCoursePrompts[0])
   return <div className="course-modal-content career-course-content">
-    <div className="course-modal-heading"><div><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 付费课程 · {unlocked ? '已解锁' : '已上线'}</p><h2>大学生求职 AI 课</h2><p>把 7 天启动训练营和完整求职课整合起来：从卡点诊断、岗位定位、JD 拆解到简历、作品集、投递、面试和 Offer 决策，做出一套可执行的求职闭环。</p><div className="course-value"><b>学完你会</b><strong>{paidCourses.career.benefit}</strong></div></div><div className="course-modal-stats">{careerCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div></div>
+    <div className="course-modal-heading"><div><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 积分课程 · {unlocked ? '已解锁' : '可解锁'}</p><h2>大学生求职 AI 课</h2><p>把 7 天启动训练营和完整求职课整合起来：从卡点诊断、岗位定位、JD 拆解到简历、作品集、投递、面试和 Offer 决策，做出一套可执行的求职闭环。</p><div className="course-value"><b>学完你会</b><strong>{paidCourses.career.benefit}</strong></div></div><div className="course-modal-stats">{careerCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div></div>
     <div className="course-modal-layout"><div className="course-chapter-list career-course-list">{careerCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}</div><article className="course-detail career-course-detail"><span className="course-detail-number">第 {selected.number} 章</span><h3>{selected.title}</h3><p className="course-detail-intro">{selected.intro}</p>{unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>{selected.acceptance && <div className="course-detail-block"><b>验收标准</b><p>{selected.acceptance}</p></div>}<div className="prompt-library"><div className="prompt-library-heading"><b>求职 Prompt 模板</b><select value={prompt.label} onChange={(event) => setPrompt(careerCoursePrompts.find((item) => item.label === event.target.value) || careerCoursePrompts[0])}>{careerCoursePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('求职 Prompt 已复制') }}>复制 Prompt <ArrowRight size={15} /></button></div><CareerCourseMaterials /><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下证据、版本和复盘记录，最后形成完整求职作品集。</div></> : <div className="course-lock-note"><UserCircle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、求职 Prompt、简历模板、投递计划和面试模拟，报名后解锁。</p></div>}{unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 大学生求职 AI 课已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.career} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} />}</article></div>
   </div>
 }
@@ -626,7 +639,7 @@ export function App() {
           <a href="#courses">课程</a>
           <a href="#cases">实战案例</a>
           <a href="#path">学习路径</a>
-          <a href="#knowledge">文档库</a>
+          <a href="#knowledge">知识库</a>
           <a href="#community">社区</a>
         </nav>
         <div className="header-actions">
@@ -708,7 +721,7 @@ export function App() {
         </section>
 
         <section className="page-width learning-strip" id="courses">
-          <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，付费课程带你完成更完整的结果。</p><button className="button button-outline small learning-all-button" onClick={() => setModal('course-center')}>查看全部课程 <ArrowRight size={15} /></button></div>
+          <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，积分课程带你完成更完整的结果。</p><button className="button button-outline small learning-all-button" onClick={() => setModal('course-center')}>查看全部课程 <ArrowRight size={15} /></button></div>
           <div className="learning-cards">
             <CourseCard course={freeCourse} featured onOpen={openCatalogCourse} />
             <CourseCard course={paidCourses.image} onOpen={openCatalogCourse} />
@@ -725,7 +738,7 @@ export function App() {
         <InviteCard user={session} data={referralData} onLogin={() => setAuthMode('register')} onNotify={notify} />
 
         <section className="principles" id="knowledge">
-          <div className="page-width principles-inner"><div><p className="eyebrow orange"><span /> 我们相信</p><h2>学以致用，互助成长</h2></div><div className="principle-grid"><span><CheckCircle size={26} /><b>真实可复现</b><small>每个案例都经过验证，拿来就能用</small></span><span><TrendUp size={26} /><b>工具即方法</b><small>聚焦 WorkBuddy 等实用工具与技巧</small></span><span><Lightbulb size={26} /><b>学以致用</b><small>从学习到落地，解决真实工作问题</small></span><span><UsersThree size={26} /><b>互助成长</b><small>社区共创，让知识产生更大价值</small></span></div></div>
+          <div className="page-width principles-inner"><div><p className="eyebrow orange"><span /> 知识沉淀</p><h2>把经验留下，下一次直接复用</h2></div><div className="principle-grid"><span><CheckCircle size={26} /><b>真实可复现</b><small>每个案例都经过验证，拿来就能用</small></span><span><TrendUp size={26} /><b>工具即方法</b><small>聚焦 WorkBuddy 等实用工具与技巧</small></span><span><Lightbulb size={26} /><b>学以致用</b><small>从学习到落地，解决真实工作问题</small></span><span><UsersThree size={26} /><b>互助成长</b><small>社区共创，让知识产生更大价值</small></span></div></div>
         </section>
       </main>
 
