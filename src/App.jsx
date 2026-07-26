@@ -21,7 +21,7 @@ import {
 import { freeCourseGroups, freeCourseStats } from './courseContent'
 import { hydrateCourseEmbeds } from './courseEmbeds'
 import { careerCourseCase, careerCourseDeliverables, careerCourseGroups, careerCoursePrompts, careerCourseResumeExamples, careerCourseStats, careerCourseVisuals } from './careerCourseContent'
-import { imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptRules } from './imageCourseContent'
+import { imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptCardAppendix, imagePromptRules } from './imageCourseContent'
 import { createRedemptionCodes, createSubmission, getAdminDashboard, getReferralSummary, getSession, grantCourse, isDemoAuth, logout, redeemPoints, requestAuthCode, reviewSubmission, unlockCourse, verifyAuthCode } from './community'
 import { skillCatalog, skillCategories } from './skillCatalog'
 
@@ -78,11 +78,11 @@ const paidCourses = {
   image: {
     id: 'image',
     title: 'AI 生图工作流训练营',
-    description: '从平台和模型选型，到提示词规范、行业案例、系列素材和交付验收，练出一套可复用的视觉生产方法。',
+    description: '从平台和模型选型，到提示词规范、行业案例、系列素材、图片转提示词插件和交付验收，练出一套可复用的视觉生产方法。',
     audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '付费课程', label: '付费进阶', cover: 'assets/image-example-course-poster.png', benefit: '独立完成一套可发布、可复用的视觉素材',
     price: { original: 199, sale: 49.9 },
-    outputs: ['一套生图提示词规范', '30+ 个行业提示词模板', '电商、内容、课程海报作品集'],
-    syllabus: ['平台与模型选择', '提示词十段式与迭代规范', '行业案例与系列组图', '作品集和商业交付'],
+    outputs: ['一套生图提示词规范', '30+ 个行业提示词模板', 'PromptCard 图片转提示词插件实操', '电商、内容、课程海报作品集'],
+    syllabus: ['平台与模型选择', '提示词十段式与迭代规范', '行业案例与系列组图', 'PromptCard 安装、分析与改写', '作品集和商业交付'],
     chapters: imageCourseGroups.flatMap((group) => group.chapters.map((chapter) => chapter.title)),
     cta: '报名并查看优惠价',
   },
@@ -259,6 +259,20 @@ function PaidCourseModal({ course, unlocked, user, onLogin, onAuthenticated, onC
   )
 }
 
+function ImagePromptCardGuide({ onNotify }) {
+  const [prompt, setPrompt] = useState(imagePromptCardAppendix.practicePrompts[0])
+  return <section className="promptcard-guide">
+    <div className="promptcard-guide-heading"><div><b>附录实操：安装 PromptCard 图片转提示词插件</b><small>把网页灵感图或局部截图变成可编辑的提示词草稿</small></div><span>Chrome 扩展</span></div>
+    <p className="promptcard-guide-note">插件可以右键分析网页图片，也可以框选页面区域；它会返回中文、英文、日文或 JSON 形式的画面分析。下面的流程重点是“分析 → 改写 → 生成 → 验收”，不要把插件输出直接当成最终提示词。</p>
+    <div className="promptcard-guide-links"><a className="button button-primary" href={imagePromptCardAppendix.storeUrl} target="_blank" rel="noreferrer">打开 Chrome 商店安装 <ArrowRight size={16} /></a><a className="text-link" href={imagePromptCardAppendix.privacyUrl} target="_blank" rel="noreferrer">查看隐私说明</a></div>
+    <div className="promptcard-guide-columns"><section><b>怎么安装</b><ol>{imagePromptCardAppendix.installSteps.map((step) => <li key={step}>{step}</li>)}</ol></section><section><b>怎么使用</b><ol>{imagePromptCardAppendix.useSteps.map((step) => <li key={step}>{step}</li>)}</ol></section></div>
+    <div className="prompt-library promptcard-rewrite"><div className="prompt-library-heading"><b>把插件结果改成自己的提示词</b><button className="text-link" onClick={() => { navigator.clipboard?.writeText(imagePromptCardAppendix.promptTemplate); onNotify('插件改写模板已复制') }}>复制改写模板 <ArrowRight size={15} /></button></div><code>{imagePromptCardAppendix.promptTemplate}</code></div>
+    <div className="prompt-library promptcard-practice"><div className="prompt-library-heading"><b>三组马上练习</b><select value={prompt.label} onChange={(event) => setPrompt(imagePromptCardAppendix.practicePrompts.find((item) => item.label === event.target.value) || imagePromptCardAppendix.practicePrompts[0])}>{imagePromptCardAppendix.practicePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('插件练习提示词已复制') }}>复制练习提示词 <ArrowRight size={15} /></button></div>
+    <div className="promptcard-checklist"><b>使用前后检查</b><div>{imagePromptCardAppendix.checklist.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></div>
+    <small className="promptcard-source-note">{imagePromptCardAppendix.versionNote} {imagePromptCardAppendix.sourceNote}</small>
+  </section>
+}
+
 function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }) {
   const chapters = imageCourseGroups.flatMap((group) => group.chapters)
   const [selected, setSelected] = useState(chapters[0])
@@ -280,10 +294,10 @@ function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }
           {imageCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}
         </div>
         <article className="course-detail image-course-detail">
-          <span className="course-detail-number">第 {selected.number} 章</span>
+          <span className="course-detail-number">{selected.number === 'A' ? '附录 A' : `第 ${selected.number} 章`}</span>
           <h3>{selected.title}</h3>
           <p className="course-detail-intro">{selected.intro}</p>
-          {unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div><div className="prompt-library">
+          {unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>{selected.plugin && <ImagePromptCardGuide onNotify={onNotify} />}<div className="prompt-library">
             <div className="prompt-library-heading"><b>分行业提示词模板</b><select value={prompt.label} onChange={(event) => setPrompt(imageCoursePrompts.find((item) => item.label === event.target.value) || imageCoursePrompts[0])}>{imageCoursePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div>
             <code>{prompt.prompt}</code>
             <button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('提示词模板已复制') }}>复制模板 <ArrowRight size={15} /></button>

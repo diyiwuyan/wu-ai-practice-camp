@@ -370,6 +370,30 @@ h1 em { color: var(--orange); font-style: normal; }
 .image-example-grid article > b { margin-top: 4px; font-size: 11px; }
 .image-example-grid article > p { margin-top: 5px; margin-bottom: 8px; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .image-example-grid .text-link { margin: 0 10px 11px; font-size: 10px; }
+.promptcard-guide { margin-top: 18px; padding: 15px; border: 1px solid #efb18f; border-radius: 12px; background: #fff8f3; }
+.promptcard-guide-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.promptcard-guide-heading b, .promptcard-guide-heading small { display: block; }
+.promptcard-guide-heading b { color: var(--deep-orange); font-size: 13px; }
+.promptcard-guide-heading small { margin-top: 4px; color: #856d60; font-size: 10px; line-height: 1.5; }
+.promptcard-guide-heading span { flex: 0 0 auto; padding: 4px 7px; border-radius: 999px; background: #ffe9dc; color: var(--deep-orange); font-size: 9px; font-weight: 900; }
+.promptcard-guide-note { margin: 0 0 11px !important; color: #755f53 !important; font-size: 11px !important; line-height: 1.65 !important; }
+.promptcard-guide-links { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.promptcard-guide-links .button { min-height: 31px; padding: 0 12px; font-size: 10px; }
+.promptcard-guide-links .text-link { font-size: 10px; }
+.promptcard-guide-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.promptcard-guide-columns section { padding: 11px; border: 1px solid #f0ddd3; border-radius: 9px; background: #fff; }
+.promptcard-guide-columns section > b { display: block; margin-bottom: 7px; color: #5a4033; font-size: 11px; }
+.promptcard-guide-columns ol { margin: 0; padding-left: 18px; color: #856d60; font-size: 10px; line-height: 1.6; }
+.promptcard-guide-columns li + li { margin-top: 5px; }
+.promptcard-rewrite, .promptcard-practice { margin-top: 11px; background: #fff; }
+.promptcard-rewrite code, .promptcard-practice code { white-space: pre-wrap; }
+.promptcard-checklist { margin-top: 11px; padding: 11px; border: 1px solid #f0ddd3; border-radius: 9px; background: #fff; }
+.promptcard-checklist > b { display: block; margin-bottom: 8px; color: var(--deep-orange); font-size: 11px; }
+.promptcard-checklist > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.promptcard-checklist article { padding: 8px; border-radius: 7px; background: #fffaf7; }
+.promptcard-checklist strong { display: block; margin-bottom: 3px; color: #5a4033; font-size: 10px; }
+.promptcard-checklist p { margin: 0 !important; color: #856d60 !important; font-size: 9px !important; line-height: 1.5 !important; }
+.promptcard-source-note { display: block; margin-top: 10px; color: #9b8172; font-size: 9px; line-height: 1.5; }
 .paid-chapter-outline { margin: 20px 0; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .paid-chapter-outline > b { display: block; margin-bottom: 10px; color: var(--deep-orange); font-size: 12px; }
 .paid-chapter-outline ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
@@ -605,6 +629,7 @@ h1 em { color: var(--orange); font-style: normal; }
   .prompt-library-heading { align-items: start; flex-direction: column; }
   .prompt-rules > div { grid-template-columns: 1fr; }
   .image-example-grid { grid-template-columns: 1fr; }
+  .promptcard-guide-columns, .promptcard-checklist > div { grid-template-columns: 1fr; }
   .enrollment-price { grid-template-columns: auto auto; }
   .enrollment-price small { grid-column: 1 / -1; }
   .enrollment-contact { align-items: start; }
