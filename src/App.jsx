@@ -36,6 +36,9 @@ const cases = [
     tags: ['WorkBuddy', 'OCR', '表格处理', '自动化'],
     image: 'assets/case-receipts.jpg',
     accent: '01',
+    courseId: 'free',
+    chapterNumber: '22',
+    courseLabel: 'WorkBuddy 免费实战课 · 第 22 章',
   },
   {
     id: 'briefing',
@@ -47,6 +50,9 @@ const cases = [
     tags: ['信息抓取', '总结提炼', '日报生成', '自动化'],
     image: 'assets/case-briefing.jpg',
     accent: '02',
+    courseId: 'free',
+    chapterNumber: '28',
+    courseLabel: 'WorkBuddy 免费实战课 · 第 28 章',
   },
   {
     id: 'site',
@@ -58,6 +64,8 @@ const cases = [
     tags: ['网站搭建', '文案生成', '设计生成', '部署上线'],
     image: 'assets/case-personal-site.jpg',
     accent: '03',
+    courseId: 'codex',
+    courseLabel: 'Codex 橙皮书 · 产品交付工作流',
   },
 ]
 
@@ -181,7 +189,13 @@ function SkillDetailModal({ skill, onNotify }) {
 function SkillGalleryModal({ items, onSelect }) {
   const [category, setCategory] = useState('全部')
   const [recommendIndex, setRecommendIndex] = useState(0)
-  const filteredItems = category === '全部' ? items : items.filter((skill) => skill.category === category)
+  const [keyword, setKeyword] = useState('')
+  const normalizedKeyword = keyword.trim().toLowerCase()
+  const filteredItems = items.filter((skill) => {
+    const matchesCategory = category === '全部' || skill.category === category
+    const matchesKeyword = !normalizedKeyword || [skill.name, skill.title, skill.category, skill.detail, skill.source].join(' ').toLowerCase().includes(normalizedKeyword)
+    return matchesCategory && matchesKeyword
+  })
   useEffect(() => {
     const timer = window.setInterval(() => setRecommendIndex((index) => (index + 1) % items.length), 4200)
     return () => window.clearInterval(timer)
@@ -190,9 +204,30 @@ function SkillGalleryModal({ items, onSelect }) {
   return <div className="skill-gallery-content">
     <div className="course-modal-heading"><div><span className="modal-icon"><SquaresFour size={26} /></span><p className="eyebrow orange"><span /> Skill 广场</p><h2>找到一个真正能安装的 Skill</h2><p>这里展示来自 skills.sh 榜单、官方仓库和高质量社区仓库的真实 Skill。每个条目都有安装命令、仓库、用途和安全提示。</p></div><div className="course-modal-stats"><span><strong>{items.length}</strong><small>已整理 Skill</small></span><span><strong>滚动推荐</strong><small>榜单更新</small></span></div></div>
     <div className="skill-recommendation"><span className="skill-recommendation-label">正在推荐</span><b>{recommended.title || recommended.name}</b><small>{recommended.rank} · {recommended.installs} 安装</small><button className="text-link" onClick={() => onSelect(recommended)}>查看并安装 <ArrowRight size={15} /></button></div>
+    <label className="skill-gallery-search"><MagnifyingGlass size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索办公、写作、生图、数据、自媒体或 Skill 名称" /></label>
     <div className="skill-gallery-filter">{skillCategories.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
-    <div className="skill-gallery-grid">{filteredItems.map((skill) => { const Icon = skill.icon; return <button className="skill-gallery-card" key={skill.id} onClick={() => onSelect(skill)}><div className="skill-card-topline"><span className="skill-icon"><Icon size={22} weight="duotone" /></span><small>{skill.category}</small></div><b>{skill.title || skill.name}</b><code>{skill.name}</code><p>{skill.detail}</p><strong>{skill.rank} · {skill.installs} 安装</strong><small className="skill-card-source">{skill.source} · 查看安装详情 <ArrowRight size={15} /></small></button> })}</div>
+    <div className="skill-gallery-result-count">显示 {filteredItems.length} 个 Skill · 每个条目都可查看仓库、安装命令和安全提示</div>
+    <div className="skill-gallery-grid">{filteredItems.map((skill) => { const Icon = skill.icon || SquaresFour; return <button className="skill-gallery-card" key={skill.id} onClick={() => onSelect(skill)}><div className="skill-card-topline"><span className="skill-icon"><Icon size={22} weight="duotone" /></span><small>{skill.category}</small></div><b>{skill.title || skill.name}</b><code>{skill.name}</code><p>{skill.detail}</p><strong>{skill.rank} · {skill.installs} 安装</strong><small className="skill-card-source">{skill.source} · 查看安装详情 <ArrowRight size={15} /></small></button> })}</div>
+    {!filteredItems.length && <div className="course-empty">没有找到匹配的 Skill，换个关键词或切回“全部”。</div>}
   </div>
+}
+
+function CourseHeroCarousel({ courses, onOpen }) {
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => setIndex((current) => (current + 1) % courses.length), 5200)
+    return () => window.clearInterval(timer)
+  }, [courses.length])
+  const course = courses[index]
+  return <article className="hero-course-carousel">
+    <div className="hero-course-image"><img src={course.cover} alt="" /><span className={'course-label ' + (course.kind === 'free' ? '' : 'paid')}>{course.label}</span><span className="hero-course-index">0{index + 1} / 0{courses.length}</span></div>
+    <div className="hero-course-copy"><p className="eyebrow orange"><span /> 课程轮播 · {course.kind === 'free' ? '免费开始' : '积分解锁'}</p><h3>{course.title}</h3><p>{course.benefit}</p><button className="button button-primary small" onClick={() => onOpen(course)}>查看课程 <ArrowRight size={15} /></button></div>
+    <div className="hero-course-dots" aria-label="选择课程">{courses.map((item, itemIndex) => <button key={item.id} className={itemIndex === index ? 'active' : ''} aria-label={`第 ${itemIndex + 1} 门课程`} onClick={() => setIndex(itemIndex)} />)}</div>
+  </article>
+}
+
+function CaseDetailModal({ item, onOpenCourse }) {
+  return <div className="case-detail-modal"><span className="modal-icon"><CheckCircle size={26} /></span><p className="eyebrow orange"><span /> 可复现案例</p><h2>{item.title}</h2><p>{item.description}</p><div className="modal-course-meta"><span>作者：{item.author}</span><span>难度：{item.difficulty}</span><span>可节省：{item.saved}</span></div><div className="case-related-course"><small>对应课程</small><strong>{item.courseLabel}</strong><p>打开课程后可以看到完整步骤、练习材料和验收方法。</p></div><button className="button button-primary full" onClick={() => onOpenCourse(item)}>进入相关课程 <ArrowRight size={17} /></button></div>
 }
 
 function CourseCard({ course, featured = false, onOpen }) {
@@ -516,6 +551,18 @@ export function App() {
     else if (course.id === 'career') setModal('career-course')
     else setModal({ kind: 'paid-course', course })
   }
+  const openCaseCourse = (item) => {
+    if (item.courseId === 'free') {
+      const chapter = allChapters.find((candidate) => candidate.number === item.chapterNumber)
+      if (chapter) {
+        setSelectedChapter(chapter)
+        setModal('course')
+        return
+      }
+    }
+    const course = courseCatalog.find((candidate) => candidate.id === item.courseId)
+    if (course) openCatalogCourse(course)
+  }
   const openReader = async () => {
     setModal('reader')
     if (courseDetails) return
@@ -608,11 +655,7 @@ export function App() {
               <span><strong>可复用</strong><small>把方法沉淀下来</small></span>
             </div>
           </div>
-          <div className="hero-art" aria-label="AI 工作流示意图">
-            <img src="assets/hero-community.jpg" alt="橙色 AI 工作流插画" />
-            <div className="hero-note hero-note-one">学以致用<br /><b>知行合一</b></div>
-            <div className="hero-note hero-note-two">专注解决<br /><b>实际问题</b></div>
-          </div>
+          <CourseHeroCarousel courses={courseCatalog} onOpen={openCatalogCourse} />
         </section>
 
         <section className="page-width section-block" id="cases">
@@ -627,7 +670,7 @@ export function App() {
           <div className="content-grid">
             <div className="case-list">
               {filteredCases.map((item) => (
-                <article className="case-row" key={item.id}>
+                <article className="case-row" key={item.id} role="button" tabIndex="0" onClick={() => setModal({ kind: 'case', item })} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setModal({ kind: 'case', item }) } }}>
                   <img src={item.image} alt="" />
                   <div className="case-body">
                     <div className="case-title-line">
@@ -639,8 +682,8 @@ export function App() {
                     <div className="case-meta"><span><UserCircle size={17} /> {item.author}</span><span>难度：{item.difficulty}</span><span>节省时间：{item.saved}</span></div>
                     <div className="tag-list">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
                   </div>
-                  <button className={`save-button ${saved.includes(item.id) ? 'saved' : ''}`} aria-label="收藏案例" onClick={() => toggleSave(item.id)}><BookmarkSimple size={20} weight={saved.includes(item.id) ? 'fill' : 'regular'} /></button>
-                  <button className="case-open" onClick={() => setModal(item)}>查看 <ArrowRight size={16} /></button>
+                  <button className={`save-button ${saved.includes(item.id) ? 'saved' : ''}`} aria-label="收藏案例" onClick={(event) => { event.stopPropagation(); toggleSave(item.id) }}><BookmarkSimple size={20} weight={saved.includes(item.id) ? 'fill' : 'regular'} /></button>
+                  <button className="case-open" onClick={(event) => { event.stopPropagation(); setModal({ kind: 'case', item }) }}>查看 <ArrowRight size={16} /></button>
                 </article>
               ))}
               {!filteredCases.length && <div className="empty-state">没有找到匹配的案例，试试搜索“自动化”或“WorkBuddy”。</div>}
@@ -665,12 +708,12 @@ export function App() {
         </section>
 
         <section className="page-width learning-strip" id="courses">
-          <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，付费课程带你完成更完整的结果。</p></div>
+          <div><p className="eyebrow orange"><span /> 从今天开始</p><h2>先学一门，马上用起来</h2><p>免费课程帮助你入门，付费课程带你完成更完整的结果。</p><button className="button button-outline small learning-all-button" onClick={() => setModal('course-center')}>查看全部课程 <ArrowRight size={15} /></button></div>
           <div className="learning-cards">
             <CourseCard course={freeCourse} featured onOpen={openCatalogCourse} />
             <CourseCard course={paidCourses.image} onOpen={openCatalogCourse} />
             <CourseCard course={paidCourses.career} onOpen={openCatalogCourse} />
-            <button className="learning-more-card" onClick={() => setModal('course-center')}><span className="learning-more-number">{courseCatalog.length}</span><b>门课程</b><p>进入课程中心，按主题、结果和学习方式筛选</p><span className="text-link">查看全部课程 <ArrowRight size={16} /></span></button>
+            <CourseCard course={paidCourses.codex} onOpen={openCatalogCourse} />
           </div>
         </section>
 
@@ -688,7 +731,7 @@ export function App() {
 
       <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills">Skill 广场</a><a href="#community">学员共创</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''} ${modal?.kind === 'case' ? 'case-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal?.kind === 'case' ? <CaseDetailModal item={modal.item} onOpenCourse={openCaseCourse} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
       {authMode && <AuthModal initialMode={authMode} inviteCode={new URLSearchParams(window.location.search).get('invite') || ''} onClose={() => setAuthMode(null)} onAuthenticated={setSession} onNotify={notify} />}
       {adminData && session?.role === 'admin' && <AdminPanel data={adminData} loading={adminLoading} onRefresh={refreshAdmin} onReview={handleReview} onGenerateCodes={handleGenerateCodes} onClose={() => setAdminData(null)} />}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}

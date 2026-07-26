@@ -1,7 +1,8 @@
 import { CheckCircle, FileText, Lightbulb, MagnifyingGlass, PaperPlaneTilt, Sparkle, SquaresFour, TrendUp } from '@phosphor-icons/react'
+import { expandedSkillCatalog } from './skillCatalogExpanded.js'
 
 // 榜单数据按 2026-07-25 的 skills.sh / GitHub 页面整理；安装命令、仓库和技能页均可直接打开。
-export const skillCatalog = [
+const coreSkillCatalog = [
   {
     id: 'find-skills', icon: SquaresFour, name: 'find-skills', title: '发现和安装更多 Skill', category: '发现与管理', detail: '让 AI 先从 Skill 广场找合适的能力，再按需安装。', audience: '不知道该装什么 Skill 的人', benefit: '把“有没有现成能力”变成可搜索、可安装的工作流。', rank: 'All-time #1', installs: '2.7M', stars: '27.1K', source: 'Vercel Labs 官方', audit: 'Trust Hub / Socket 通过；Snyk 提醒', installCommand: 'npx skills add https://github.com/vercel-labs/skills --skill find-skills', repoUrl: 'https://github.com/vercel-labs/skills', marketUrl: 'https://www.skills.sh/vercel-labs/skills/find-skills', steps: ['安装后让 AI 按任务搜索 Skill', '先看来源、安装量和审查状态', '确认仓库内容后再安装到对应 Agent']
   },
@@ -45,5 +46,12 @@ export const skillCatalog = [
     id: 'copywriting', icon: Lightbulb, name: 'copywriting', title: '写转化型产品文案', category: '内容与营销', detail: '从用户、价值主张、证据和行动入口组织网页、课程和营销文案。', audience: '做课程、产品、活动和内容运营的人', benefit: '让文案从“介绍功能”变成“推动下一步行动”。', rank: 'All-time #187', installs: '160.3K', stars: '5.8K', source: '社区 Skill · marketingskills', audit: '安装前建议检查仓库内容', installCommand: 'npx skills add https://github.com/coreyhaines31/marketingskills --skill copywriting', repoUrl: 'https://github.com/coreyhaines31/marketingskills', marketUrl: 'https://www.skills.sh/coreyhaines31/marketingskills/copywriting', steps: ['先明确受众和行动目标', '补齐用户痛点、结果和可信证据', '最后检查标题、结构和 CTA']
   },
 ]
+
+const expandedIcons = [SquaresFour, FileText, Lightbulb, MagnifyingGlass, PaperPlaneTilt, Sparkle, TrendUp]
+const expandedSkills = expandedSkillCatalog
+  .filter((item) => !coreSkillCatalog.some((core) => core.name === item.name))
+  .map((item, index) => ({ ...item, icon: expandedIcons[index % expandedIcons.length] }))
+
+export const skillCatalog = [...coreSkillCatalog, ...expandedSkills]
 
 export const skillCategories = ['全部', ...new Set(skillCatalog.map((skill) => skill.category))]
