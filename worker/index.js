@@ -265,6 +265,51 @@ async function handleApi(request, env, url) {
     return json({ ok: true, courseId, spentPoints: price, referralReward: reward, user: await enrichUser(env, { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status, createdAt: user.createdAt }) });
   }
 
+  if (request.method === "GET" && route === "submissions") {
+    const urlQuery = new URL(request.url).searchParams;
+    const category = String(urlQuery.get("category") || "").trim().slice(0, 30);
+    const query = String(urlQuery.get("q") || "").trim().slice(0, 100);
+    const sort = String(urlQuery.get("sort") || "latest");
+    const orderBy = sort === "hot" ? "likes DESC, submissions.created_at DESC" : sort === "comments" ? "comments DESC, submissions.created_at DESC" : "submissions.created_at DESC";
+    const conditions = ["submissions.status = 'approved'"];
+    const bindings = [];
+    if (category) { conditions.push("submissions.category = ?"); bindings.push(category); }
+    if (query) { conditions.push("(submissions.title LIKE ? OR submissions.description LIKE ? OR submissions.prompt LIKE ?)"); const pattern = `%${query}%`; bindings.push(pattern, pattern, pattern); }
+    const rows = await env.DB.prepare(`SELECT submissions.id, submissions.title, submissions.category, submissions.description, submissions.prompt, submissions.asset_url AS assetUrl, submissions.created_at AS createdAt, users.id AS authorId, users.name AS author, users.email AS authorEmail, (SELECT COUNT(*) FROM submission_likes WHERE submission_likes.submission_id = submissions.id) AS likes, (SELECT COUNT(*) FROM submission_comments WHERE submission_comments.submission_id = submissions.id AND submission_comments.status = 'visible') AS comments FROM submissions JOIN users ON users.id = submissions.user_id WHERE ${conditions.join(" AND ")} ORDER BY ${orderBy} LIMIT 100`).bind(...bindings).all();
+    return json({ submissions: rows.results || [] });
+  }
+
+  const likeMatch = route.match(/^submissions\/([^/]+)\/like$/);
+  if (request.method === "POST" && likeMatch) {
+    const user = await currentUser(request, env);
+    if (!user) return json({ message: "请先登录后点赞" }, 401);
+    const submission = await env.DB.prepare("SELECT id FROM submissions WHERE id = ? AND status = 'approved'").bind(likeMatch[1]).first();
+    if (!submission) return json({ message: "投稿不存在或尚未公开" }, 404);
+    const existing = await env.DB.prepare("SELECT id FROM submission_likes WHERE submission_id = ? AND user_id = ?").bind(likeMatch[1], user.id).first();
+    if (existing) await env.DB.prepare("DELETE FROM submission_likes WHERE id = ?").bind(existing.id).run();
+    else await env.DB.prepare("INSERT INTO submission_likes (id, submission_id, user_id, created_at) VALUES (?, ?, ?, ?)").bind(crypto.randomUUID(), likeMatch[1], user.id, isoNow()).run();
+    const count = await env.DB.prepare("SELECT COUNT(*) AS count FROM submission_likes WHERE submission_id = ?").bind(likeMatch[1]).first();
+    return json({ liked: !existing, likes: Number(count?.count || 0) });
+  }
+
+  const commentMatch = route.match(/^submissions\/([^/]+)\/comments$/);
+  if (request.method === "GET" && commentMatch) {
+    const comments = await env.DB.prepare("SELECT submission_comments.id, submission_comments.text, submission_comments.created_at AS createdAt, users.id AS authorId, users.name AS author FROM submission_comments JOIN users ON users.id = submission_comments.user_id WHERE submission_comments.submission_id = ? AND submission_comments.status = 'visible' ORDER BY submission_comments.created_at ASC LIMIT 100").bind(commentMatch[1]).all();
+    return json({ comments: comments.results || [] });
+  }
+  if (request.method === "POST" && commentMatch) {
+    const user = await currentUser(request, env);
+    if (!user) return json({ message: "请先登录后评论" }, 401);
+    const payload = await body(request);
+    const text = String(payload.text || "").trim().slice(0, 500);
+    if (!text) return json({ message: "评论内容不能为空" }, 400);
+    const submission = await env.DB.prepare("SELECT id FROM submissions WHERE id = ? AND status = 'approved'").bind(commentMatch[1]).first();
+    if (!submission) return json({ message: "投稿不存在或尚未公开" }, 404);
+    const comment = { id: crypto.randomUUID(), submissionId: commentMatch[1], text, authorId: user.id, author: user.name || user.email, createdAt: isoNow() };
+    await env.DB.prepare("INSERT INTO submission_comments (id, submission_id, user_id, text, status, created_at) VALUES (?, ?, ?, ?, 'visible', ?)").bind(comment.id, comment.submissionId, user.id, text, comment.createdAt).run();
+    return json({ comment }, 201);
+  }
+
   if (request.method === "POST" && route === "submissions") {
     const user = await currentUser(request, env);
     if (!user) return json({ message: "请先登录" }, 401);
@@ -330,8 +375,20 @@ async function handleApi(request, env, url) {
     const payload = await body(request);
     const status = ["pending", "approved", "rejected"].includes(payload.status) ? payload.status : "pending";
     const note = String(payload.note || "").trim().slice(0, 1000);
-    await env.DB.prepare("UPDATE submissions SET status = ?, reviewer_note = ?, reviewed_at = ? WHERE id = ?").bind(status, note, isoNow(), adminMatch[1]).run();
-    return json({ ok: true });
+    const current = await env.DB.prepare("SELECT id, user_id AS userId, status, reward_points AS rewardPoints FROM submissions WHERE id = ?").bind(adminMatch[1]).first();
+    if (!current) return json({ message: "投稿不存在" }, 404);
+    const reward = status === "approved" && current.status !== "approved" && Number(current.rewardPoints || 0) === 0 ? 5 : 0;
+    const now = isoNow();
+    const statements = [env.DB.prepare("UPDATE submissions SET status = ?, reviewer_note = ?, reviewed_at = ?, reward_points = reward_points + ? WHERE id = ?").bind(status, note, now, reward, adminMatch[1])];
+    if (reward > 0) {
+      statements.push(
+        env.DB.prepare("INSERT OR IGNORE INTO user_points (user_id, balance, updated_at) VALUES (?, 0, ?)").bind(current.userId, now),
+        env.DB.prepare("UPDATE user_points SET balance = balance + ?, updated_at = ? WHERE user_id = ?").bind(reward, now, current.userId),
+        env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'submission_reward', ?, ?, ?)").bind(crypto.randomUUID(), current.userId, reward, current.id, "投稿通过奖励", now),
+      );
+    }
+    await env.DB.batch(statements);
+    return json({ ok: true, rewardPoints: reward });
   }
 
   return json({ message: "API 路径不存在" }, 404);

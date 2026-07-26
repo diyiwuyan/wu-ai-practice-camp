@@ -4,9 +4,12 @@ import {
   ArrowRight,
   ArrowLeft,
   Bell,
+  BookOpen,
   BookmarkSimple,
+  ChatCircle,
   CheckCircle,
   FileText,
+  Heart,
   Lightbulb,
   MagnifyingGlass,
   PaperPlaneTilt,
@@ -22,7 +25,8 @@ import { freeCourseGroups, freeCourseStats } from './courseContent'
 import { hydrateCourseEmbeds } from './courseEmbeds'
 import { careerCourseCase, careerCourseDeliverables, careerCourseGroups, careerCoursePrompts, careerCourseResumeExamples, careerCourseStats, careerCourseVisuals } from './careerCourseContent'
 import { imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptCardAppendix, imagePromptRules } from './imageCourseContent'
-import { createRedemptionCodes, createSubmission, getAdminDashboard, getReferralSummary, getSession, grantCourse, isDemoAuth, logout, redeemPoints, requestAuthCode, reviewSubmission, unlockCourse, verifyAuthCode } from './community'
+import { addSubmissionComment, createRedemptionCodes, createSubmission, getAdminDashboard, getPublishedSubmissions, getReferralSummary, getSession, getSubmissionComments, grantCourse, isDemoAuth, logout, redeemPoints, requestAuthCode, reviewSubmission, toggleSubmissionLike, unlockCourse, verifyAuthCode } from './community'
+import { knowledgeItems, knowledgeTypes } from './knowledgeContent'
 import { skillCatalog, skillCategories } from './skillCatalog'
 
 const cases = [
@@ -70,6 +74,15 @@ const cases = [
 ]
 
 const skills = skillCatalog
+
+const featuredCommunityItems = cases.map((item, index) => ({
+  ...item,
+  type: '实战案例',
+  summary: item.description,
+  likes: [128, 96, 74][index] || 32,
+  comments: [18, 12, 9][index] || 3,
+  source: 'featured',
+}))
 
 const codexOutlineGroups = [
   { label: '0. 使用说明', items: ['重要声明', '这份手册适合谁', '阅读路线'] },
@@ -240,6 +253,65 @@ function CourseHeroCarousel({ courses, onOpen }) {
 
 function CaseDetailModal({ item, onOpenCourse }) {
   return <div className="case-detail-modal"><span className="modal-icon"><CheckCircle size={26} /></span><p className="eyebrow orange"><span /> 可复现案例</p><h2>{item.title}</h2><p>{item.description}</p><div className="modal-course-meta"><span>作者：{item.author}</span><span>难度：{item.difficulty}</span><span>可节省：{item.saved}</span></div><div className="case-related-course"><small>对应课程</small><strong>{item.courseLabel}</strong><p>打开课程后可以看到完整步骤、练习材料和验收方法。</p></div><button className="button button-primary full" onClick={() => onOpenCourse(item)}>进入相关课程 <ArrowRight size={17} /></button></div>
+}
+
+function KnowledgeCenterModal({ items, savedIds, learnedIds, onSelect }) {
+  const [keyword, setKeyword] = useState('')
+  const [type, setType] = useState('全部')
+  const [sort, setSort] = useState('hot')
+  const tools = ['全部', ...new Set(items.map((item) => item.tool))]
+  const normalized = keyword.trim().toLowerCase()
+  const filtered = items.filter((item) => {
+    const matchesType = type === '全部' || item.type === type
+    const matchesKeyword = !normalized || [item.title, item.summary, item.tool, item.author, ...item.tags].join(' ').toLowerCase().includes(normalized)
+    return matchesType && matchesKeyword
+  }).sort((a, b) => sort === 'latest' ? b.updatedAt.localeCompare(a.updatedAt) : b.useCount - a.useCount)
+  return <div className="knowledge-center-content">
+    <div className="content-center-heading"><div><span className="modal-icon"><BookOpen size={26} /></span><p className="eyebrow orange"><span /> 知识沉淀</p><h2>把经验留下，下一次直接复用</h2><p>从课程、案例和 Skill 中提炼任务卡、Prompt、清单和方法，遇到相似问题时直接搜索和复制。</p></div><div className="content-center-stats"><span><strong>{items.length}</strong><small>知识条目</small></span><span><strong>{savedIds.length}</strong><small>我的收藏</small></span><span><strong>{learnedIds.length}</strong><small>已掌握</small></span></div></div>
+    <div className="knowledge-toolbar"><label className="content-search"><MagnifyingGlass size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索任务卡、Prompt、Skill 或工具" /></label><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="hot">最常用</option><option value="latest">最近更新</option></select></div>
+    <div className="content-filter-row"><div>{knowledgeTypes.map((item) => <button key={item} className={type === item ? 'active' : ''} onClick={() => setType(item)}>{item}</button>)}</div><small>{tools.length - 1} 个工具方向 · 显示 {filtered.length} 条</small></div>
+    <div className="knowledge-grid">{filtered.map((item) => <button className="knowledge-card" key={item.id} onClick={() => onSelect(item)}><div className="knowledge-card-top"><span>{item.type}</span><small>{item.updatedAt}</small></div><h3>{item.title}</h3><p>{item.summary}</p><div className="knowledge-card-meta"><span>{item.tool}</span><span><TrendUp size={13} /> {item.useCount} 次使用</span><span>{savedIds.includes(item.id) ? '已收藏' : learnedIds.includes(item.id) ? '已掌握' : '查看详情'} <ArrowRight size={14} /></span></div></button>)}</div>
+    {!filtered.length && <div className="course-empty">没有找到匹配的知识，换个工具名或切换内容类型。</div>}
+  </div>
+}
+
+function KnowledgeDetailModal({ item, saved, learned, onToggleSave, onToggleLearn, onOpenCourse, onOpenCase, onNotify }) {
+  return <div className="knowledge-detail-content"><span className="modal-icon"><BookOpen size={26} /></span><p className="eyebrow orange"><span /> {item.type} · {item.tool}</p><h2>{item.title}</h2><p>{item.summary}</p><div className="knowledge-detail-meta"><span>作者：{item.author}</span><span>更新：{item.updatedAt}</span><span>{item.useCount} 次使用</span></div>{item.sections?.map(([heading, body]) => <section className="knowledge-detail-section" key={heading}><h3>{heading}</h3><p>{body}</p></section>)}{item.prompt && <section className="prompt-library knowledge-prompt"><div className="prompt-library-heading"><b>可复制模板</b><button className="text-link" onClick={() => { navigator.clipboard?.writeText(item.prompt); onNotify('知识模板已复制') }}>复制模板 <ArrowRight size={15} /></button></div><code>{item.prompt}</code></section>}<div className="knowledge-detail-tags">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="knowledge-detail-actions"><button className={'button ' + (saved ? 'button-primary' : 'button-outline')} onClick={() => onToggleSave(item.id)}><BookmarkSimple size={17} weight={saved ? 'fill' : 'regular'} /> {saved ? '已收藏' : '收藏知识'}</button><button className={'button ' + (learned ? 'button-primary' : 'button-outline')} onClick={() => onToggleLearn(item.id)}><CheckCircle size={17} weight={learned ? 'fill' : 'regular'} /> {learned ? '已掌握' : '标记已掌握'}</button></div><div className="knowledge-related-links">{item.courseLabel && <button className="text-link" onClick={() => onOpenCourse(item)}>进入相关课程 <ArrowRight size={15} /></button>}{item.relatedCaseId && <button className="text-link" onClick={() => onOpenCase(item.relatedCaseId)}>查看相关案例 <ArrowRight size={15} /></button>}</div></div>
+}
+
+function CommunityCenterModal({ items, savedIds, likedIds, onSelect, onSubmit, onOpenAuthor }) {
+  const [keyword, setKeyword] = useState('')
+  const [type, setType] = useState('全部')
+  const [sort, setSort] = useState('hot')
+  const categories = ['全部', '实战案例', 'Skill', 'Prompt', '知识卡片']
+  const normalized = keyword.trim().toLowerCase()
+  const filtered = items.filter((item) => (type === '全部' || item.type === type) && (!normalized || [item.title, item.summary, item.description, item.author, item.type, ...(item.tags || [])].join(' ').toLowerCase().includes(normalized))).sort((a, b) => sort === 'latest' ? String(b.createdAt || '').localeCompare(String(a.createdAt || '')) : (b.likes || 0) - (a.likes || 0))
+  const ranking = [...items].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 3)
+  return <div className="community-center-content"><div className="content-center-heading"><div><span className="modal-icon"><UsersThree size={26} /></span><p className="eyebrow orange"><span /> 学员共创</p><h2>把你的工作流分享给下一位同学</h2><p>这里展示经过审核的真实案例、Skill、Prompt 和学习笔记。先看别人的结果，再贡献自己的方法。</p></div><div className="content-center-stats"><span><strong>{items.length}</strong><small>公开内容</small></span><span><strong>{savedIds.length}</strong><small>我的收藏</small></span><span><strong>+5</strong><small>投稿通过奖励</small></span></div></div><div className="community-toolbar"><label className="content-search"><MagnifyingGlass size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索案例、Prompt、Skill 或作者" /></label><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="hot">最受欢迎</option><option value="latest">最新发布</option></select></div><div className="content-filter-row"><div>{categories.map((item) => <button key={item} className={type === item ? 'active' : ''} onClick={() => setType(item)}>{item}</button>)}</div><button className="button button-primary small" onClick={onSubmit}>发布我的工作流 <PaperPlaneTilt size={15} /></button></div><div className="community-layout"><div className="community-grid">{filtered.map((item) => <button className="community-card" key={item.id} onClick={() => onSelect(item)}><div className="community-card-image">{item.image ? <img src={item.image} alt="" /> : <div className="community-card-placeholder"><Sparkle size={28} /></div>}<span>{item.type}</span></div><div className="community-card-copy"><div className="community-card-title"><span>{item.author}</span><small>{item.createdAt ? String(item.createdAt).slice(0, 10) : '精选内容'}</small></div><h3>{item.title}</h3><p>{item.summary || item.description}</p><div className="community-card-meta"><span><Heart size={14} weight={likedIds.includes(item.id) ? 'fill' : 'regular'} /> {item.likes || 0}</span><span><ChatCircle size={14} /> {item.comments || 0}</span><span>{savedIds.includes(item.id) ? '已收藏' : '查看详情'} <ArrowRight size={14} /></span></div></div></button>)}</div><aside className="community-ranking"><div className="content-side-heading"><h3>本周共创榜</h3><TrendUp size={18} /></div>{ranking.map((item, index) => <button key={item.id} onClick={() => onSelect(item)}><b>0{index + 1}</b><span><strong>{item.title}</strong><small>{item.author} · {item.likes || 0} 个赞</small></span></button>)}<div className="community-reward-note"><b>投稿通过奖励 5 积分</b><p>优质案例、Skill、Prompt 和知识卡片都可以投稿，审核通过后自动到账。</p></div></aside></div>{!filtered.length && <div className="course-empty">还没有匹配内容，换个关键词或发布第一条工作流。</div>}</div>
+}
+
+function CommunityDetailModal({ item, saved, liked, onToggleSave, onToggleLike, onOpenCourse, onOpenAuthor, onAddComment, onLogin, onNotify }) {
+  const [comments, setComments] = useState([])
+  const [commentText, setCommentText] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    getSubmissionComments(item.id).then((remoteComments) => {
+      let localComments = []
+      try { localComments = JSON.parse(window.localStorage.getItem('wu-ai-static-community-comments') || '[]').filter((comment) => comment.submissionId === item.id) } catch { localComments = [] }
+      setComments([...remoteComments, ...localComments])
+    }).catch(() => setComments([]))
+  }, [item.id])
+  const addComment = async () => {
+    if (!commentText.trim()) return
+    setBusy(true)
+    try { const result = await onAddComment(item, commentText.trim()); if (result?.comment) setComments((current) => [...current, result.comment]); setCommentText(''); onNotify('评论已发布') } catch (error) { if (error.message?.includes('登录')) onLogin(); else onNotify(error.message) } finally { setBusy(false) }
+  }
+  return <div className="community-detail-content"><div className="community-detail-top"><div><p className="eyebrow orange"><span /> {item.type} · {item.source === 'submission' ? '学员投稿' : '精选案例'}</p><h2>{item.title}</h2><p>{item.summary || item.description}</p></div>{item.image && <img src={item.image} alt="" />}</div><div className="community-detail-meta"><button onClick={() => onOpenAuthor(item.author)}><UserCircle size={16} /> {item.author}</button><span>{item.tool || item.tags?.join(' · ')}</span><span>{item.createdAt ? String(item.createdAt).slice(0, 10) : '精选内容'}</span></div>{item.prompt && <section className="prompt-library"><div className="prompt-library-heading"><b>投稿中的 Prompt</b><button className="text-link" onClick={() => { navigator.clipboard?.writeText(item.prompt); onNotify('Prompt 已复制') }}>复制 Prompt <ArrowRight size={15} /></button></div><code>{item.prompt}</code></section>}<div className="community-detail-actions"><button className={'button ' + (liked ? 'button-primary' : 'button-outline')} onClick={() => onToggleLike(item)}><Heart size={17} weight={liked ? 'fill' : 'regular'} /> {liked ? '已点赞' : '点赞'} {item.likes || 0}</button><button className={'button ' + (saved ? 'button-primary' : 'button-outline')} onClick={() => onToggleSave(item.id)}><BookmarkSimple size={17} weight={saved ? 'fill' : 'regular'} /> {saved ? '已收藏' : '收藏'}</button></div>{item.courseLabel && <div className="case-related-course"><small>关联课程</small><strong>{item.courseLabel}</strong><p>把这个方法放进课程练习，按步骤复现并留下自己的结果。</p><button className="button button-primary small" onClick={() => onOpenCourse(item)}>进入相关课程 <ArrowRight size={15} /></button></div>}<section className="community-comments"><div className="content-side-heading"><h3>同学评论</h3><span>{comments.length} 条</span></div>{comments.length ? comments.map((comment) => <article key={comment.id}><UserCircle size={17} /><div><b>{comment.author || '同学'}</b><p>{comment.text}</p></div></article>) : <p className="community-empty-comment">还没有评论，留下你的实践结果吧。</p>}<div className="community-comment-form"><input value={commentText} onChange={(event) => setCommentText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addComment() }} placeholder="写下你的实践结果或问题" /><button className="button button-primary small" disabled={busy || !commentText.trim()} onClick={addComment}>{busy ? '发送中…' : '发表评论'}</button></div></section></div>
+}
+
+function CommunityAuthorModal({ author, items, onSelect }) {
+  const authored = items.filter((item) => item.author === author)
+  return <div className="community-author-content"><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 学员主页</p><h2>{author}</h2><p>共贡献 {authored.length} 条内容，把真实工作方法整理成可复用的案例和模板。</p><div className="author-stats"><span><strong>{authored.length}</strong><small>公开内容</small></span><span><strong>{authored.reduce((sum, item) => sum + (item.likes || 0), 0)}</strong><small>获得点赞</small></span><span><strong>{authored.reduce((sum, item) => sum + (item.comments || 0), 0)}</strong><small>互动评论</small></span></div><div className="author-items">{authored.map((item) => <button key={item.id} onClick={() => onSelect(item)}><span>{item.type}</span><strong>{item.title}</strong><small>{item.likes || 0} 赞 · {item.comments || 0} 条评论</small></button>)}</div></div>
 }
 
 function CourseCard({ course, featured = false, onOpen }) {
@@ -522,10 +594,24 @@ export function App() {
   const [completedChapters, setCompletedChapters] = useState(() => {
     try { return JSON.parse(window.localStorage.getItem('wu-ai-completed-chapters') || '[]') } catch { return [] }
   })
+  const [knowledgeSaved, setKnowledgeSaved] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem('wu-ai-saved-knowledge') || '[]') } catch { return [] }
+  })
+  const [knowledgeLearned, setKnowledgeLearned] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem('wu-ai-learned-knowledge') || '[]') } catch { return [] }
+  })
+  const [communityLiked, setCommunityLiked] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem('wu-ai-liked-community') || '[]') } catch { return [] }
+  })
+  const [publishedSubmissions, setPublishedSubmissions] = useState([])
 
   useEffect(() => { window.localStorage.setItem('wu-ai-saved-cases', JSON.stringify(saved)) }, [saved])
   useEffect(() => { window.localStorage.setItem('wu-ai-completed-chapters', JSON.stringify(completedChapters)) }, [completedChapters])
+  useEffect(() => { window.localStorage.setItem('wu-ai-saved-knowledge', JSON.stringify(knowledgeSaved)) }, [knowledgeSaved])
+  useEffect(() => { window.localStorage.setItem('wu-ai-learned-knowledge', JSON.stringify(knowledgeLearned)) }, [knowledgeLearned])
+  useEffect(() => { window.localStorage.setItem('wu-ai-liked-community', JSON.stringify(communityLiked)) }, [communityLiked])
   useEffect(() => { getSession().then(setSession).catch(() => setSession(null)) }, [])
+  useEffect(() => { getPublishedSubmissions({ sort: 'latest' }).then(setPublishedSubmissions).catch(() => setPublishedSubmissions([])) }, [])
   useEffect(() => {
     if (!session) { setReferralData(null); return }
     getReferralSummary().then(setReferralData).catch(() => setReferralData(null))
@@ -540,6 +626,27 @@ export function App() {
     return cases.filter((item) => [item.title, item.description, ...item.tags].join(' ').toLowerCase().includes(text))
   }, [query])
 
+  const communityItems = useMemo(() => [
+    ...featuredCommunityItems,
+    ...publishedSubmissions.map((item) => ({
+      id: item.id,
+      type: item.category || '实战案例',
+      title: item.title,
+      summary: item.description,
+      description: item.description,
+      prompt: item.prompt,
+      author: item.author || item.authorEmail || '匿名同学',
+      authorId: item.authorId,
+      createdAt: item.createdAt,
+      likes: Number(item.likes || 0),
+      comments: Number(item.comments || 0),
+      assetUrl: item.assetUrl,
+      image: item.assetUrl || '',
+      tags: item.tags || [],
+      source: 'submission',
+    })),
+  ], [publishedSubmissions])
+
   const notify = (message) => {
     setToast(message)
     window.setTimeout(() => setToast(''), 2200)
@@ -549,7 +656,52 @@ export function App() {
 
   const toggleSave = (id) => {
     setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
-    notify(saved.includes(id) ? '已取消收藏' : '案例已收藏到我的实践')
+    notify(saved.includes(id) ? '已取消收藏' : '已收藏到我的实践')
+  }
+
+  const toggleKnowledgeSaved = (id) => {
+    setKnowledgeSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
+    notify(knowledgeSaved.includes(id) ? '已取消收藏知识' : '知识已收藏')
+  }
+
+  const toggleKnowledgeLearned = (id) => {
+    setKnowledgeLearned((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
+    notify(knowledgeLearned.includes(id) ? '已取消掌握标记' : '已标记为掌握')
+  }
+
+  const toggleCommunityLike = async (item) => {
+    if (!session) { setAuthMode('login'); return }
+    if (item.source === 'submission') {
+      try {
+        const result = await toggleSubmissionLike(item.id)
+        setCommunityLiked((current) => result.liked ? [...new Set([...current, item.id])] : current.filter((id) => id !== item.id))
+        notify(result.liked ? '已点赞' : '已取消点赞')
+      } catch (error) { notify(error.message) }
+      return
+    }
+    setCommunityLiked((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])
+    notify(communityLiked.includes(item.id) ? '已取消点赞' : '已点赞')
+  }
+
+  const addCommunityComment = async (item, text) => {
+    if (!session) throw new Error('请先登录后评论')
+    if (item.source === 'submission') return addSubmissionComment(item.id, text)
+    const key = 'wu-ai-static-community-comments'
+    let comments = []
+    try { comments = JSON.parse(window.localStorage.getItem(key) || '[]') } catch { comments = [] }
+    const comment = { id: `local-${Date.now()}`, submissionId: item.id, author: session.name || session.email, text, createdAt: new Date().toISOString() }
+    window.localStorage.setItem(key, JSON.stringify([...comments, comment]))
+    return { comment }
+  }
+
+  const openKnowledgeCourse = (item) => {
+    const course = courseCatalog.find((candidate) => candidate.id === item.courseId)
+    if (course) openCatalogCourse(course)
+  }
+
+  const openKnowledgeCase = (id) => {
+    const item = communityItems.find((candidate) => candidate.id === id)
+    if (item) setModal({ kind: 'community-detail', item })
   }
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -639,8 +791,8 @@ export function App() {
           <a href="#courses">课程</a>
           <a href="#cases">实战案例</a>
           <a href="#path">学习路径</a>
-          <a href="#knowledge">知识库</a>
-          <a href="#community">社区</a>
+          <a href="#knowledge" onClick={(event) => { event.preventDefault(); setModal('knowledge-center') }}>知识库</a>
+          <a href="#community" onClick={(event) => { event.preventDefault(); setModal('community-center') }}>社区</a>
         </nav>
         <div className="header-actions">
           <label className="search-box">
@@ -708,7 +860,7 @@ export function App() {
                 <div className="skill-list">{skills.slice(0, 3).map((skill) => { const Icon = skill.icon; return <button className="skill-item" key={skill.id} onClick={() => setModal({ kind: 'skill', skill })}><span className="skill-icon"><Icon size={20} weight="duotone" /></span><span><b>{skill.title || skill.name}</b><small>{skill.detail}</small></span><em>{skill.installs}</em></button> })}</div>
               </section>
               <section className="side-card contribution-card" id="community">
-                <div className="side-heading"><h3>学员贡献</h3><UsersThree size={21} weight="duotone" /></div>
+                <div className="side-heading"><h3>学员共创</h3><button className="text-link" onClick={() => setModal('community-center')}>查看共创 <ArrowRight size={15} /></button></div>
                 <div className="contribution-stats"><span><strong>1,248</strong><small>实战案例</small></span><span><strong>327</strong><small>优质 Skill</small></span><span><strong>2,156</strong><small>知识库条目</small></span></div>
                 <div className="member-line"><UsersThree size={19} /><span>已有 12,345 位同学在这里互相帮助，共同成长</span></div>
               </section>
@@ -737,14 +889,19 @@ export function App() {
 
         <InviteCard user={session} data={referralData} onLogin={() => setAuthMode('register')} onNotify={notify} />
 
-        <section className="principles" id="knowledge">
+        <section className="page-width knowledge-preview section-block" id="knowledge-preview">
+          <div className="section-heading compact"><div><p className="eyebrow orange"><span /> 知识沉淀</p><h2>把常用方法放在手边</h2><p>任务卡、Prompt 和检查清单，首页只展示精选，完整内容进入知识库。</p></div><button className="text-link" onClick={() => setModal('knowledge-center')}>打开知识库 <ArrowRight size={17} /></button></div>
+          <div className="knowledge-preview-grid">{knowledgeItems.slice(0, 3).map((item) => <button className="knowledge-preview-card" key={item.id} onClick={() => setModal({ kind: 'knowledge', item })}><span>{item.type}</span><h3>{item.title}</h3><p>{item.summary}</p><small>{item.tool} · 查看详情 <ArrowRight size={14} /></small></button>)}</div>
+        </section>
+
+        <section className="principles" id="knowledge-principles">
           <div className="page-width principles-inner"><div><p className="eyebrow orange"><span /> 知识沉淀</p><h2>把经验留下，下一次直接复用</h2></div><div className="principle-grid"><span><CheckCircle size={26} /><b>真实可复现</b><small>每个案例都经过验证，拿来就能用</small></span><span><TrendUp size={26} /><b>工具即方法</b><small>聚焦 WorkBuddy 等实用工具与技巧</small></span><span><Lightbulb size={26} /><b>学以致用</b><small>从学习到落地，解决真实工作问题</small></span><span><UsersThree size={26} /><b>互助成长</b><small>社区共创，让知识产生更大价值</small></span></div></div>
         </section>
       </main>
 
-      <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills">Skill 广场</a><a href="#community">学员共创</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
+      <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills" onClick={(event) => { event.preventDefault(); setModal('skills') }}>Skill 广场</a><a href="#community" onClick={(event) => { event.preventDefault(); setModal('community-center') }}>学员共创</a><a href="#knowledge" onClick={(event) => { event.preventDefault(); setModal('knowledge-center') }}>知识库</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''} ${modal?.kind === 'case' ? 'case-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal?.kind === 'case' ? <CaseDetailModal item={modal.item} onOpenCourse={openCaseCourse} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={() => setModal(null)}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''} ${modal?.kind === 'case' ? 'case-modal' : ''} ${['knowledge-center', 'community-center'].includes(modal) ? 'content-center-modal' : ''} ${modal?.kind === 'knowledge' ? 'knowledge-modal' : ''} ${modal?.kind === 'community-detail' ? 'community-modal' : ''} ${modal?.kind === 'author' ? 'author-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setModal(null)} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal === 'knowledge-center' ? <KnowledgeCenterModal items={knowledgeItems} savedIds={knowledgeSaved} learnedIds={knowledgeLearned} onSelect={(item) => setModal({ kind: 'knowledge', item })} /> : modal === 'community-center' ? <CommunityCenterModal items={communityItems} savedIds={saved} likedIds={communityLiked} onSelect={(item) => setModal({ kind: 'community-detail', item })} onSubmit={() => setModal('submit')} /> : modal?.kind === 'knowledge' ? <KnowledgeDetailModal item={modal.item} saved={knowledgeSaved.includes(modal.item.id)} learned={knowledgeLearned.includes(modal.item.id)} onToggleSave={toggleKnowledgeSaved} onToggleLearn={toggleKnowledgeLearned} onOpenCourse={openKnowledgeCourse} onOpenCase={openKnowledgeCase} onNotify={notify} /> : modal?.kind === 'community-detail' ? <CommunityDetailModal item={modal.item} saved={saved.includes(modal.item.id)} liked={communityLiked.includes(modal.item.id)} onToggleSave={toggleSave} onToggleLike={toggleCommunityLike} onOpenCourse={openCaseCourse} onOpenAuthor={(author) => setModal({ kind: 'author', author })} onAddComment={addCommunityComment} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal?.kind === 'author' ? <CommunityAuthorModal author={modal.author} items={communityItems} onSelect={(item) => setModal({ kind: 'community-detail', item })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal?.kind === 'case' ? <CaseDetailModal item={modal.item} onOpenCourse={openCaseCourse} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => setModal('course')} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
       {authMode && <AuthModal initialMode={authMode} inviteCode={new URLSearchParams(window.location.search).get('invite') || ''} onClose={() => setAuthMode(null)} onAuthenticated={setSession} onNotify={notify} />}
       {adminData && session?.role === 'admin' && <AdminPanel data={adminData} loading={adminLoading} onRefresh={refreshAdmin} onReview={handleReview} onGenerateCodes={handleGenerateCodes} onClose={() => setAdminData(null)} />}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}

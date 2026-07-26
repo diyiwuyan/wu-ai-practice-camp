@@ -7,6 +7,8 @@ const STORAGE = {
   users: 'wu-ai-demo-users',
   submissions: 'wu-ai-demo-submissions',
   redemptionCodes: 'wu-ai-demo-redemption-codes',
+  communityLikes: 'wu-ai-demo-community-likes',
+  communityComments: 'wu-ai-demo-community-comments',
 }
 
 function readJson(key, fallback) {
@@ -107,6 +109,53 @@ export async function createSubmission(submission) {
     const item = { ...submission, id: 'demo-submission-' + Date.now(), status: 'pending', author: user?.name || user?.email || '本地演示用户', authorEmail: user?.email || '', createdAt: new Date().toISOString() }
     writeJson(STORAGE.submissions, [item, ...readJson(STORAGE.submissions, [])])
     return { submission: item, demo: true }
+  }
+}
+
+export async function getPublishedSubmissions({ category = '', sort = 'latest', query = '' } = {}) {
+  const params = new URLSearchParams()
+  if (category) params.set('category', category)
+  if (sort) params.set('sort', sort)
+  if (query) params.set('q', query)
+  try {
+    const payload = await request('/submissions?' + params.toString())
+    return payload.submissions || []
+  } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) return []
+    const normalized = query.trim().toLowerCase()
+    return readJson(STORAGE.submissions, []).filter((item) => item.status === 'approved').filter((item) => !category || item.category === category).filter((item) => !normalized || [item.title, item.description, item.category, item.prompt].join(' ').toLowerCase().includes(normalized))
+  }
+}
+
+export async function toggleSubmissionLike(submissionId) {
+  try { return await request(`/submissions/${encodeURIComponent(submissionId)}/like`, { method: 'POST' }) } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) throw error
+    const current = readJson(STORAGE.communityLikes, {})
+    const liked = !current[submissionId]
+    writeJson(STORAGE.communityLikes, { ...current, [submissionId]: liked })
+    return { liked, likes: liked ? 1 : 0, demo: true }
+  }
+}
+
+export async function getSubmissionComments(submissionId) {
+  try {
+    const payload = await request(`/submissions/${encodeURIComponent(submissionId)}/comments`)
+    return payload.comments || []
+  } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) return []
+    return readJson(STORAGE.communityComments, {})[submissionId] || []
+  }
+}
+
+export async function addSubmissionComment(submissionId, text) {
+  try { return await request(`/submissions/${encodeURIComponent(submissionId)}/comments`, { method: 'POST', body: JSON.stringify({ text }) }) } catch (error) {
+    if (!DEMO_MODE || error.status !== 404) throw error
+    const user = readJson(STORAGE.session, null)
+    if (!user) throw new Error('请先登录后评论')
+    const all = readJson(STORAGE.communityComments, {})
+    const comment = { id: 'demo-comment-' + Date.now(), submissionId, text: String(text).trim(), author: user.name || user.email, createdAt: new Date().toISOString() }
+    writeJson(STORAGE.communityComments, { ...all, [submissionId]: [...(all[submissionId] || []), comment] })
+    return { comment, demo: true }
   }
 }
 
