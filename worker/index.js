@@ -1,6 +1,7 @@
 const SESSION_COOKIE = "wu_session";
 const SESSION_DAYS = 30;
 const REFERRAL_RATE = 0.30;
+const REFERRAL_WINDOW_DAYS = 30;
 
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
@@ -30,6 +31,13 @@ function json(data, status = 200, headers = {}) {
 
 function isoNow() {
   return new Date().toISOString();
+}
+
+function isWithinReferralWindow(createdAt, now = Date.now()) {
+  const registeredAt = Date.parse(createdAt || "");
+  if (!Number.isFinite(registeredAt)) return false;
+  const elapsed = now - registeredAt;
+  return elapsed >= 0 && elapsed <= REFERRAL_WINDOW_DAYS * 86400 * 1000;
 }
 
 function getCookie(request, name) {
@@ -195,7 +203,7 @@ async function handleApi(request, env, url) {
     const invited = await env.DB.prepare("SELECT COUNT(*) AS count FROM referral_profiles WHERE inviter_id = ?").bind(user.id).first();
     const earned = await env.DB.prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM point_transactions WHERE user_id = ? AND type = 'referral_reward'").bind(user.id).first();
     const transactions = await env.DB.prepare("SELECT id, amount, reference_id AS referenceId, note, created_at AS createdAt FROM point_transactions WHERE user_id = ? AND type = 'referral_reward' ORDER BY created_at DESC LIMIT 50").bind(user.id).all();
-    return json({ referralCode: profile?.code || user.referralCode, invitedCount: Number(invited?.count || 0), earnedPoints: Number(earned?.total || 0), rate: REFERRAL_RATE, transactions: transactions.results || [] });
+    return json({ referralCode: profile?.code || user.referralCode, invitedCount: Number(invited?.count || 0), earnedPoints: Number(earned?.total || 0), rate: REFERRAL_RATE, windowDays: REFERRAL_WINDOW_DAYS, transactions: transactions.results || [] });
   }
 
   if (request.method === "GET" && route === "points/transactions") {
@@ -243,8 +251,9 @@ async function handleApi(request, env, url) {
     const now = isoNow();
     const debit = await env.DB.prepare("UPDATE user_points SET balance = balance - ?, updated_at = ? WHERE user_id = ? AND balance >= ?").bind(price, now, user.id, price).run();
     if (!debit.meta?.changes) return json({ message: "积分不足，请刷新账户后重试" }, 400);
-    const relationship = await env.DB.prepare("SELECT inviter_id AS inviterId FROM referral_profiles WHERE user_id = ?").bind(user.id).first().catch(() => null);
-    const reward = relationship?.inviterId ? Math.round(price * REFERRAL_RATE * 100) / 100 : 0;
+    const relationship = await env.DB.prepare("SELECT inviter_id AS inviterId, created_at AS createdAt FROM referral_profiles WHERE user_id = ?").bind(user.id).first().catch(() => null);
+    const referralEligible = relationship?.inviterId && isWithinReferralWindow(relationship.createdAt, Date.now());
+    const reward = referralEligible ? Math.round(price * REFERRAL_RATE * 100) / 100 : 0;
     try {
       const statements = [
         env.DB.prepare("INSERT INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), user.id, courseId, "points", now),
@@ -254,7 +263,7 @@ async function handleApi(request, env, url) {
         statements.push(
           env.DB.prepare("INSERT OR IGNORE INTO user_points (user_id, balance, updated_at) VALUES (?, 0, ?)").bind(relationship.inviterId, now),
           env.DB.prepare("UPDATE user_points SET balance = balance + ?, updated_at = ? WHERE user_id = ?").bind(reward, now, relationship.inviterId),
-          env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'referral_reward', ?, ?, ?)").bind(crypto.randomUUID(), relationship.inviterId, reward, `${user.id}:${courseId}`, `邀请返利：被邀请人消费 ${price} 积分的 30%`, now),
+          env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'referral_reward', ?, ?, ?)").bind(crypto.randomUUID(), relationship.inviterId, reward, `${user.id}:${courseId}`, `邀请返利：注册后 ${REFERRAL_WINDOW_DAYS} 天内消费 ${price} 积分的 30%`, now),
         );
       }
       await env.DB.batch(statements);

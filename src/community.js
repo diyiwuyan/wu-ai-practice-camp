@@ -90,7 +90,7 @@ export async function getReferralSummary() {
     if (!current) throw new Error('请先登录')
     const users = readJson(STORAGE.users, [])
     const invited = users.filter((item) => item.invitedBy === current.id)
-    return { referralCode: current.referralCode, invitedCount: invited.length, earnedPoints: Number(current.referralEarned || 0), rate: 0.3, transactions: [], demo: true }
+    return { referralCode: current.referralCode, invitedCount: invited.length, earnedPoints: Number(current.referralEarned || 0), rate: 0.3, windowDays: 30, transactions: [], demo: true }
   }
 }
 
@@ -214,7 +214,9 @@ export async function unlockCourse(courseId, price = 49.9) {
     const unlockedCourses = current.unlockedCourses || []
     if (unlockedCourses.includes(courseId)) return { ok: true, alreadyUnlocked: true, user: current, demo: true }
     if (Number(current.points || 0) < price) throw new Error(`积分不足，需要 ${price} 积分`)
-    const reward = current.invitedBy ? Math.round(price * 0.3 * 100) / 100 : 0
+    const registeredAt = Date.parse(current.createdAt || '')
+    const referralEligible = current.invitedBy && Number.isFinite(registeredAt) && Date.now() >= registeredAt && Date.now() - registeredAt <= 30 * 86400 * 1000
+    const reward = referralEligible ? Math.round(price * 0.3 * 100) / 100 : 0
     const user = { ...current, points: Number(current.points || 0) - price, unlockedCourses: [...new Set([...unlockedCourses, courseId])] }
     writeJson(STORAGE.session, user)
     const users = readJson(STORAGE.users, [])
