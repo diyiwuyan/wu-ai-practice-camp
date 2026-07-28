@@ -151,7 +151,7 @@ const worksCourse = {
   kind: 'free',
   title: 'workbuddy进阶实战之作品',
   label: '免费进阶课',
-  cover: 'assets/course-cover-workbuddy.png',
+  cover: 'assets/case-personal-site.jpg',
   benefit: '用 WorkBuddy 做出四个拿得出手的作品：公众号写作流、小红书闭环、自己的小程序、上线的网站',
   description: '四个专题、四件作品：公众号从选题到发布、小红书选题封面与账号分析、上线自己的小程序、Vibe Coding 一个网站并部署上线。',
   stats: '4 专题 · 4 作品 · 可直接用 Prompt',
@@ -750,7 +750,12 @@ export function App() {
   }
 
   const updateReaderHash = (courseId, chapterNumber) => { window.location.hash = `#reader/${courseId}/${chapterNumber}` }
-  const clearReaderHash = () => { if (window.location.hash.startsWith('#reader/')) window.location.hash = '' }
+  const clearReaderHash = () => {
+    if (window.location.hash.startsWith('#reader/')) {
+      // 用 replaceState 清除 hash，避免 location.hash='' 触发页面跳回顶部
+      history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
+  }
   const closeModal = () => { setModal(null); clearReaderHash() }
 
   const hasCourseAccess = (courseId) => session?.role === 'admin' || unlockedCourses.includes(courseId) || session?.unlockedCourses?.includes(courseId)
