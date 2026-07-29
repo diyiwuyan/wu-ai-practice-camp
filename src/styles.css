@@ -428,6 +428,10 @@ h1 em { color: var(--orange); font-style: normal; }
 .paid-reader-lesson-intro h3 { margin: 0 0 8px; font-size: 21px; }
 .paid-reader-lesson-intro > p:last-child { max-width: 720px; margin: 0; color: #755f53; font-size: 13px; line-height: 1.75; }
 .paid-reader-key-cards { margin-top: 0; }
+.paid-reader-key-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.paid-reader-key-cards .course-reader-card { min-height: 0; padding: 13px 14px; }
+.paid-reader-key-cards .course-reader-card > span { width: 24px; height: 24px; margin-bottom: 8px; }
+.paid-reader-key-cards .course-reader-card h4 { margin-bottom: 5px; }
 .paid-reader-prompt { margin-top: 22px; }
 .paid-reader-rules { margin-top: 22px; }
 .paid-reader-examples { margin-top: 22px; }
