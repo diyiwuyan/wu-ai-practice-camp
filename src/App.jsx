@@ -27,6 +27,7 @@ import { worksCourseDetails } from './worksCourseDetails'
 import { hydrateCourseEmbeds } from './courseEmbeds'
 import { careerCourseCase, careerCourseDeliverables, careerCourseGroups, careerCoursePrompts, careerCourseResumeExamples, careerCourseStats, careerCourseVisuals } from './careerCourseContent'
 import { imageCourseChapterContent, imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptCardAppendix, imagePromptRules } from './imageCourseContent'
+import { careerLessonContent, imageLessonContent } from './courseLessonContent'
 import { addSubmissionComment, createRedemptionCodes, createSubmission, getAdminDashboard, getPublishedSubmissions, getReferralSummary, getSession, getSubmissionComments, grantCourse, isDemoAuth, logout, redeemPoints, requestAuthCode, reviewSubmission, toggleSubmissionLike, unlockCourse, verifyAuthCode } from './community'
 import { knowledgeItems, knowledgeTypes } from './knowledgeContent'
 import { skillCatalog, skillCategories } from './skillCatalog'
@@ -614,6 +615,16 @@ const paidCourseChapters = {
   career: careerCourseGroups.flatMap((group) => group.chapters),
 }
 
+function CourseLessonBody({ courseId, chapter }) {
+  const content = (courseId === 'career' ? careerLessonContent : imageLessonContent)[chapter.number]
+  if (!content) return null
+  return <section className={'course-lesson-body ' + (courseId === 'career' ? 'career-lesson-body' : 'image-lesson-body')}>
+    <div className="course-lesson-heading"><p className="eyebrow orange"><span /> 课堂正文</p><h2>{content.title}</h2><p>{content.lead}</p></div>
+    <div className="course-lesson-sections">{content.sections.map(([title, detail, points]) => <article key={title}><h3>{title}</h3><p>{detail}</p><ul>{points.map((point) => <li key={point}>{point}</li>)}</ul></article>)}</div>
+    <section className="course-lesson-case"><div><p className="eyebrow orange"><span /> 案例拆解</p><h3>{content.caseTitle}</h3><ol>{content.caseSteps.map((step) => <li key={step}>{step}</li>)}</ol></div><div className="course-lesson-output"><b>本章要交付</b><p>{content.output}</p></div></section>
+  </section>
+}
+
 function PaidCourseReader({ courseId, course, chapter, completedChapters, onBack, onPrevious, onNext, onComplete, onJump, onNotify }) {
   const groups = paidCourseGroups[courseId] || []
   const chapters = paidCourseChapters[courseId] || []
@@ -643,7 +654,9 @@ function PaidCourseReader({ courseId, course, chapter, completedChapters, onBack
         <div className="course-reader-source-note"><span>{courseId === 'image' ? '生图训练营课程正文' : '大学生求职 AI 课正文'}</span><span>目录、案例、Prompt 和验收工具已整合</span></div>
         <section className="paid-reader-lesson-intro"><p className="eyebrow orange"><span /> 本章学习目标</p><h3>{courseId === 'career' ? '把经历变成可投递、可复盘的材料' : '先看懂，再做出自己的结果'}</h3><p>{courseId === 'career' ? '本页沿用求职分享材料里的岗位定位、证据库、简历、投递和面试训练逻辑；AI 只负责整理、模拟和复盘，不替你编造经历，也不替你做职业决定。' : '本页把本章的目标、练习、Prompt、案例和验收标准放在同一个学习空间里。不要只复制答案，先用自己的素材做一遍，再回看哪里需要调整。'}</p></section>
         <section className="course-reader-grid paid-reader-key-cards"><section className="course-reader-card"><span>01</span><h4>马上练习</h4><p>{chapter.exercise}</p></section><section className="course-reader-card"><span>02</span><h4>本章产出</h4><p>{chapter.output}</p></section>{chapter.acceptance && <section className="course-reader-card"><span>03</span><h4>验收标准</h4><p>{chapter.acceptance}</p></section>}</section>
+        <CourseLessonBody courseId={courseId} chapter={chapter} />
         {courseId === 'image' && <><section className="image-chapter-case"><div><p className="eyebrow orange"><span /> 本章案例</p><h3>{chapterContent.caseTitle}</h3><p>{chapterContent.caseSummary}</p><ol>{chapterContent.steps.map((step) => <li key={step}>{step}</li>)}</ol></div><img src={exampleItems[0]?.image} alt={exampleItems[0]?.title || chapter.title} /></section><section className="prompt-library paid-reader-prompt"><div className="prompt-library-heading"><b>本章专属提示词</b><select value={prompt.label} onChange={(event) => setPrompt(promptItems.find((item) => item.label === event.target.value) || promptItems[0])}>{promptItems.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('本章 Prompt 已复制') }}>复制本章 Prompt <ArrowRight size={15} /></button></section><section className="prompt-rules paid-reader-rules"><b>本章提示词规范</b><div>{chapterContent.rules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section>{chapter.plugin && <ImagePromptCardGuide onNotify={onNotify} />}<section className="image-example-section paid-reader-examples"><div className="prompt-library-heading"><b>本章示例图与练习素材</b><small>{exampleItems.length} 张对应本章的图</small></div><div className="image-example-grid">{exampleItems.map((example) => <article key={example.title}><img src={example.image} alt={example.title} /><span>{example.type}</span><b>{example.title}</b><p>{example.takeaway}</p><button className="text-link" onClick={() => { navigator.clipboard?.writeText(example.prompt); onNotify('本章案例 Prompt 已复制') }}>复制案例 Prompt <ArrowRight size={15} /></button></article>)}</div></section></>}
+        {courseId === 'career' && <section className="prompt-library paid-reader-prompt"><div className="prompt-library-heading"><b>本章求职 Prompt 模板</b><select value={prompt.label} onChange={(event) => setPrompt(promptItems.find((item) => item.label === event.target.value) || promptItems[0])}>{promptItems.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('本章求职 Prompt 已复制') }}>复制本章 Prompt <ArrowRight size={15} /></button></section>}
         {courseId === 'career' && chapter.number === '01' && <CareerCourseMaterials />}
         <section className="course-reader-checklist"><h4>{courseId === 'career' ? '完成本章的三个动作' : '完成本章的三个动作'}</h4><ol>{courseId === 'career' ? <><li>只使用自己的真实经历，先补齐事实、结果、附件和待核验信息。</li><li>按本章练习完成一遍，保存岗位版本、Prompt、反馈和修改原因。</li><li>换一个目标岗位再检查一遍，确认材料可解释、可追问、不可夸大。</li></> : <><li>先准备真实输入材料，写清用途、受众、交付格式和限制条件。</li><li>按本章练习完成一遍，保存过程稿、Prompt、结果和修改原因。</li><li>换成自己的任务再做一遍，用验收标准检查，不合格就只改一个变量。</li></>}</ol></section>
         <div className="course-reader-tip"><CheckCircle size={18} weight="fill" /> 课程里的案例是练习起点；涉及真实个人信息、客户素材或对外发布时，必须人工核验后再使用。</div>
