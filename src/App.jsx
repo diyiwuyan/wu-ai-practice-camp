@@ -451,7 +451,7 @@ function ImagePromptCardGuide({ onNotify }) {
   </section>
 }
 
-function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }) {
+function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify, onOpenChapter }) {
   const chapters = imageCourseGroups.flatMap((group) => group.chapters)
   const [selected, setSelected] = useState(chapters[0])
   const [prompt, setPrompt] = useState(imageCoursePrompts[0])
@@ -469,7 +469,7 @@ function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }
       </div>
       <div className="course-modal-layout">
         <div className="course-chapter-list image-course-list">
-          {imageCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}
+          {imageCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => { setSelected(chapter); if (unlocked) onOpenChapter?.(chapter) }}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}
         </div>
         <article className="course-detail image-course-detail">
           <span className="course-detail-number">{selected.number === 'A' ? '附录 A' : `第 ${selected.number} 章`}</span>
@@ -487,13 +487,44 @@ function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }
   )
 }
 
-function CareerCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify }) {
+function CareerCourseModalLegacy({ unlocked, user, onLogin, onAuthenticated, onNotify, onOpenChapter }) {
   const chapters = careerCourseGroups.flatMap((group) => group.chapters)
   const [selected, setSelected] = useState(chapters[0])
   const [prompt, setPrompt] = useState(careerCoursePrompts[0])
   return <div className="course-modal-content career-course-content">
     <div className="course-modal-heading"><div><span className="modal-icon"><UserCircle size={26} /></span><p className="eyebrow orange"><span /> 积分课程 · {unlocked ? '已解锁' : '可解锁'}</p><h2>大学生求职 AI 课</h2><p>把 7 天启动训练营和完整求职课整合起来：从卡点诊断、岗位定位、JD 拆解到简历、作品集、投递、面试和 Offer 决策，做出一套可执行的求职闭环。</p><div className="course-value"><b>学完你会</b><strong>{paidCourses.career.benefit}</strong></div></div><div className="course-modal-stats">{careerCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div></div>
     <div className="course-modal-layout"><div className="course-chapter-list career-course-list">{careerCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => setSelected(chapter)}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}</div><article className="course-detail career-course-detail"><span className="course-detail-number">第 {selected.number} 章</span><h3>{selected.title}</h3><p className="course-detail-intro">{selected.intro}</p>{unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>{selected.acceptance && <div className="course-detail-block"><b>验收标准</b><p>{selected.acceptance}</p></div>}<div className="prompt-library"><div className="prompt-library-heading"><b>求职 Prompt 模板</b><select value={prompt.label} onChange={(event) => setPrompt(careerCoursePrompts.find((item) => item.label === event.target.value) || careerCoursePrompts[0])}>{careerCoursePrompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('求职 Prompt 已复制') }}>复制 Prompt <ArrowRight size={15} /></button></div><CareerCourseMaterials /><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 每章都要留下证据、版本和复盘记录，最后形成完整求职作品集。</div></> : <div className="course-lock-note"><UserCircle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、求职 Prompt、简历模板、投递计划和面试模拟，报名后解锁。</p></div>}{unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 大学生求职 AI 课已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.career} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} />}</article></div>
+  </div>
+}
+
+function CareerCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify, onOpenChapter }) {
+  const chapters = careerCourseGroups.flatMap((group) => group.chapters)
+  const [selected, setSelected] = useState(chapters[0])
+  return <div className="course-modal-content career-course-content paid-directory-content">
+    <div className="course-modal-heading">
+      <div>
+        <span className="modal-icon"><UserCircle size={26} /></span>
+        <p className="eyebrow orange"><span /> 积分课程 · {unlocked ? '已解锁' : '积分解锁'}</p>
+        <h2>大学生求职 AI 课</h2>
+        <p>{paidCourses.career.description}</p>
+        <div className="course-value"><b>学完你会</b><strong>{paidCourses.career.benefit}</strong></div>
+      </div>
+      <div className="course-modal-stats">{careerCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>
+    </div>
+    <div className="course-directory-layout">
+      <div className="course-chapter-list career-course-list">
+        {careerCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => { setSelected(chapter); if (unlocked) onOpenChapter?.(chapter) }}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}
+      </div>
+      <article className="course-detail career-course-detail paid-directory-preview">
+        <span className="course-detail-number">第 {selected.number} 章</span>
+        <h3>{selected.title}</h3>
+        <p className="course-detail-intro">{selected.intro}</p>
+        <div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div>
+        <div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>
+        {selected.acceptance && <div className="course-detail-block"><b>验收标准</b><p>{selected.acceptance}</p></div>}
+        {unlocked ? <><button className="button button-primary full paid-reader-start" onClick={() => onOpenChapter?.(selected)}>进入本章全页面学习 <ArrowRight size={16} /></button><div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 已解锁，点击任意章节即可进入全页面学习。</div></> : <><div className="course-lock-note"><UserCircle size={19} /><b>本章内容已上线</b><p>当前展示目录和章节简介；完整练习、求职 Prompt、案例卡与交付工具，解锁后进入全页面学习。</p></div><EnrollmentOffer course={paidCourses.career} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} /></>}
+      </article>
+    </div>
   </div>
 }
 
@@ -575,6 +606,50 @@ function AdminPanel({ data, loading, onRefresh, onReview, onGenerateCodes, onClo
 }
 
 const allChapters = freeCourseGroups.flatMap((group) => group.chapters)
+const paidCourseGroups = { image: imageCourseGroups, career: careerCourseGroups }
+const paidCourseChapters = {
+  image: imageCourseGroups.flatMap((group) => group.chapters),
+  career: careerCourseGroups.flatMap((group) => group.chapters),
+}
+
+function PaidCourseReader({ courseId, course, chapter, completedChapters, onBack, onPrevious, onNext, onComplete, onJump, onNotify }) {
+  const groups = paidCourseGroups[courseId] || []
+  const chapters = paidCourseChapters[courseId] || []
+  const chapterIndex = chapters.findIndex((item) => item.number === chapter.number)
+  const isFirst = chapterIndex <= 0
+  const isLast = chapterIndex === chapters.length - 1
+  const isCompleted = completedChapters.includes(courseId + ':' + chapter.number)
+  const exampleItems = courseId === 'image' ? imageCourseExamples : []
+  const promptItems = courseId === 'image' ? imageCoursePrompts : careerCoursePrompts
+  const defaultPrompt = courseId === 'image'
+    ? (chapter.number === '13' ? imageCoursePrompts.find((item) => item.label === '参考图反推') || imageCoursePrompts[0] : imageCoursePrompts[Math.min(Math.max(chapterIndex - 3, 0), imageCoursePrompts.length - 1)])
+    : careerCoursePrompts[Math.min(chapterIndex, careerCoursePrompts.length - 1)]
+  const [prompt, setPrompt] = useState(defaultPrompt)
+  useEffect(() => setPrompt(defaultPrompt), [chapter.number, courseId])
+
+  return <div className="course-reader-content paid-course-reader-content">
+    <header className="course-reader-header">
+      <button className="course-reader-back" onClick={onBack}><ArrowLeft size={17} /> 返回课程目录</button>
+      <div className="course-reader-progress"><b>{course.title}</b><span>第 {chapterIndex + 1} / {chapters.length} 章</span></div>
+      <div className="course-reader-top-nav"><button className="button button-outline small" disabled={isFirst} onClick={onPrevious}><ArrowLeft size={14} /> 上一章</button><button className="button button-outline small" disabled={isLast} onClick={onNext}>下一章 <ArrowRight size={14} /></button></div>
+    </header>
+    <div className="course-reader-body">
+      <aside className="course-reader-chapter-sidebar"><div className="course-reader-sidebar-heading">课程目录</div>{groups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((item) => <button key={item.number} className={'course-chapter ' + (chapter.number === item.number ? 'selected' : '') + (completedChapters.includes(courseId + ':' + item.number) ? ' completed' : '')} onClick={() => onJump(item)}><span>{item.number}</span><span><b>{item.title}</b><small>{item.level} · {item.time}</small></span>{completedChapters.includes(courseId + ':' + item.number) ? <CheckCircle size={15} weight="fill" /> : <ArrowRight size={15} />}</button>)}</section>)}</aside>
+      <article className="course-reader-main paid-course-reader-main">
+        <div className="course-reader-chapter-header"><span className="course-detail-number">{chapter.number === 'A' ? '附录 A' : '第 ' + chapter.number + ' 章'} · {chapter.level}</span><h1>{chapter.title}</h1><p>{chapter.intro}</p><div className="course-reader-chapter-meta"><span>{chapter.time}</span><span>本章产出：{chapter.output}</span></div></div>
+        <div className="course-reader-source-note"><span>{courseId === 'image' ? '生图训练营课程正文' : '大学生求职 AI 课正文'}</span><span>目录、案例、Prompt 和验收工具已整合</span></div>
+        <section className="paid-reader-lesson-intro"><p className="eyebrow orange"><span /> 本章学习目标</p><h3>先看懂，再做出自己的结果</h3><p>本页把本章的目标、练习、Prompt、案例和验收标准放在同一个学习空间里。不要只复制答案，先用自己的素材做一遍，再回看哪里需要调整。</p></section>
+        <section className="course-reader-grid paid-reader-key-cards"><section className="course-reader-card"><span>01</span><h4>马上练习</h4><p>{chapter.exercise}</p></section><section className="course-reader-card"><span>02</span><h4>本章产出</h4><p>{chapter.output}</p></section>{chapter.acceptance && <section className="course-reader-card"><span>03</span><h4>验收标准</h4><p>{chapter.acceptance}</p></section>}</section>
+        <section className="prompt-library paid-reader-prompt"><div className="prompt-library-heading"><b>{courseId === 'image' ? '本章生图 Prompt 模板' : '本章求职 Prompt 模板'}</b><select value={prompt.label} onChange={(event) => setPrompt(promptItems.find((item) => item.label === event.target.value) || promptItems[0])}>{promptItems.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('本章 Prompt 已复制') }}>复制本章 Prompt <ArrowRight size={15} /></button></section>
+        {courseId === 'image' && <><section className="prompt-rules paid-reader-rules"><b>本章提示词规范</b><div>{imagePromptRules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section>{chapter.plugin && <ImagePromptCardGuide onNotify={onNotify} />}<section className="image-example-section paid-reader-examples"><div className="prompt-library-heading"><b>案例图库：按场景反复练</b><small>课程内置 {exampleItems.length} 个视觉参考案例</small></div><div className="image-example-grid">{exampleItems.map((example) => <article key={example.title}><img src={example.image} alt={example.title} /><span>{example.type}</span><b>{example.title}</b><p>{example.takeaway}</p><button className="text-link" onClick={() => { navigator.clipboard?.writeText(example.prompt); onNotify('案例提示词已复制') }}>复制案例 Prompt <ArrowRight size={15} /></button></article>)}</div></section></>}
+        {courseId === 'career' && chapter.number === '01' && <CareerCourseMaterials />}
+        <section className="course-reader-checklist"><h4>完成本章的三个动作</h4><ol><li>先准备真实输入材料，写清用途、受众、交付格式和限制条件。</li><li>按本章练习完成一遍，保存过程稿、Prompt、结果和修改原因。</li><li>换成自己的任务再做一遍，用验收标准检查，不合格就只改一个变量。</li></ol></section>
+        <div className="course-reader-tip"><CheckCircle size={18} weight="fill" /> 课程里的案例是练习起点；涉及真实个人信息、客户素材或对外发布时，必须人工核验后再使用。</div>
+      </article>
+    </div>
+    <footer className="course-reader-footer"><button className="button button-outline" disabled={isFirst} onClick={onPrevious}><ArrowLeft size={16} /> 上一章</button><button className={'course-reader-complete ' + (isCompleted ? 'completed' : '')} onClick={onComplete}><CheckCircle size={17} weight={isCompleted ? 'fill' : 'regular'} /> {isCompleted ? '已完成本章' : '完成本章'}</button><button className="button button-primary" disabled={isLast} onClick={onNext}>{isLast ? '已到最后一章' : '下一章'} <ArrowRight size={16} /></button></footer>
+  </div>
+}
 
 function CourseReader({ chapter, details, loadError, completedChapters, onBack, onPrevious, onNext, onComplete, onJump, chapters = allChapters, groups = freeCourseGroups, courseTitle = 'WorkBuddy 免费实战课', courseId = 'free' }) {
   const chapterIndex = chapters.findIndex((item) => item.number === chapter.number)
@@ -677,6 +752,9 @@ export function App() {
   const [completedWorksChapters, setCompletedWorksChapters] = useState(() => {
     try { return JSON.parse(window.localStorage.getItem('wu-ai-works-completed-chapters') || '[]') } catch { return [] }
   })
+  const [completedPaidChapters, setCompletedPaidChapters] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem('wu-ai-paid-completed-chapters') || '[]') } catch { return [] }
+  })
   const [knowledgeSaved, setKnowledgeSaved] = useState(() => {
     try { return JSON.parse(window.localStorage.getItem('wu-ai-saved-knowledge') || '[]') } catch { return [] }
   })
@@ -691,6 +769,7 @@ export function App() {
   useEffect(() => { window.localStorage.setItem('wu-ai-saved-cases', JSON.stringify(saved)) }, [saved])
   useEffect(() => { window.localStorage.setItem('wu-ai-completed-chapters', JSON.stringify(completedChapters)) }, [completedChapters])
   useEffect(() => { window.localStorage.setItem('wu-ai-works-completed-chapters', JSON.stringify(completedWorksChapters)) }, [completedWorksChapters])
+  useEffect(() => { window.localStorage.setItem('wu-ai-paid-completed-chapters', JSON.stringify(completedPaidChapters)) }, [completedPaidChapters])
   useEffect(() => { window.localStorage.setItem('wu-ai-saved-knowledge', JSON.stringify(knowledgeSaved)) }, [knowledgeSaved])
   useEffect(() => { window.localStorage.setItem('wu-ai-learned-knowledge', JSON.stringify(knowledgeLearned)) }, [knowledgeLearned])
   useEffect(() => { window.localStorage.setItem('wu-ai-liked-community', JSON.stringify(communityLiked)) }, [communityLiked])
@@ -701,7 +780,7 @@ export function App() {
     getReferralSummary().then(setReferralData).catch(() => setReferralData(null))
   }, [session?.id, session?.points])
   useEffect(() => {
-    if (modal === 'reader') document.querySelector('.course-reader-modal .course-reader-main')?.scrollTo({ top: 0, behavior: 'auto' })
+    if (modal === 'reader' || modal === 'works-reader' || modal?.kind === 'paid-reader') document.querySelector('.course-reader-modal .course-reader-main')?.scrollTo({ top: 0, behavior: 'auto' })
   }, [modal, selectedChapter.number])
 
   useEffect(() => {
@@ -725,6 +804,12 @@ export function App() {
         } else {
           setModal('works-course')
         }
+      }
+    } else if (courseId === 'image' || courseId === 'career') {
+      const chapter = paidCourseChapters[courseId].find((item) => item.number === chapterNumber)
+      if (chapter) {
+        if (hasCourseAccess(courseId)) setModal({ kind: 'paid-reader', courseId, chapterNumber })
+        else setModal(courseId === 'image' ? 'image-course' : 'career-course')
       }
     }
   }, [])
@@ -834,6 +919,29 @@ export function App() {
     else if (course.id === 'image') setModal('image-course')
     else if (course.id === 'career') setModal('career-course')
     else setModal({ kind: 'paid-course', course })
+  }
+  const openPaidChapter = (courseId, chapter) => {
+    if (!hasCourseAccess(courseId)) { notify('请先用积分解锁这门课程'); return }
+    setModal({ kind: 'paid-reader', courseId, chapterNumber: chapter.number })
+    updateReaderHash(courseId, chapter.number)
+  }
+  const movePaidChapter = (courseId, offset) => {
+    const chapters = paidCourseChapters[courseId] || []
+    const currentNumber = modal?.kind === 'paid-reader' ? modal.chapterNumber : chapters[0]?.number
+    const currentIndex = chapters.findIndex((item) => item.number === currentNumber)
+    const nextChapter = chapters[currentIndex + offset]
+    if (!nextChapter) return
+    setModal({ kind: 'paid-reader', courseId, chapterNumber: nextChapter.number })
+    updateReaderHash(courseId, nextChapter.number)
+  }
+  const jumpPaidChapter = (courseId, chapter) => {
+    setModal({ kind: 'paid-reader', courseId, chapterNumber: chapter.number })
+    updateReaderHash(courseId, chapter.number)
+  }
+  const completePaidChapter = (courseId, chapter) => {
+    const key = courseId + ':' + chapter.number
+    setCompletedPaidChapters((current) => current.includes(key) ? current : [...current, key])
+    notify('第 ' + chapter.number + ' 章已完成，继续保持')
   }
   const openCaseCourse = (item) => {
     if (item.courseId === 'free') {
@@ -1055,7 +1163,7 @@ export function App() {
 
       <footer className="site-footer"><div className="page-width footer-inner"><div><strong>武同学AI实践营</strong><p>让 AI 真正帮你做事。</p></div><div className="footer-links"><a href="#courses">课程中心</a><a href="#cases">实战案例</a><a href="#skills" onClick={(event) => { event.preventDefault(); setModal('skills') }}>Skill 广场</a><a href="#community" onClick={(event) => { event.preventDefault(); setModal('community-center') }}>学员共创</a><a href="#knowledge" onClick={(event) => { event.preventDefault(); setModal('knowledge-center') }}>知识库</a></div><span>© 2026 Wu AI Practice Camp</span></div></footer>
 
-      {modal && <div className="modal-backdrop" onClick={closeModal}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''} ${modal === 'works-course' ? 'course-modal' : ''} ${modal === 'works-reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'case' ? 'case-modal' : ''} ${['knowledge-center', 'community-center'].includes(modal) ? 'content-center-modal' : ''} ${modal?.kind === 'knowledge' ? 'knowledge-modal' : ''} ${modal?.kind === 'community-detail' ? 'community-modal' : ''} ${modal?.kind === 'author' ? 'author-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={closeModal} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal === 'knowledge-center' ? <KnowledgeCenterModal items={knowledgeItems} savedIds={knowledgeSaved} learnedIds={knowledgeLearned} onSelect={(item) => setModal({ kind: 'knowledge', item })} /> : modal === 'community-center' ? <CommunityCenterModal items={communityItems} savedIds={saved} likedIds={communityLiked} onSelect={(item) => setModal({ kind: 'community-detail', item })} onSubmit={() => setModal('submit')} /> : modal?.kind === 'knowledge' ? <KnowledgeDetailModal item={modal.item} saved={knowledgeSaved.includes(modal.item.id)} learned={knowledgeLearned.includes(modal.item.id)} onToggleSave={toggleKnowledgeSaved} onToggleLearn={toggleKnowledgeLearned} onOpenCourse={openKnowledgeCourse} onOpenCase={openKnowledgeCase} onNotify={notify} /> : modal?.kind === 'community-detail' ? <CommunityDetailModal item={modal.item} saved={saved.includes(modal.item.id)} liked={communityLiked.includes(modal.item.id)} onToggleSave={toggleSave} onToggleLike={toggleCommunityLike} onOpenCourse={openCaseCourse} onOpenAuthor={(author) => setModal({ kind: 'author', author })} onAddComment={addCommunityComment} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal?.kind === 'author' ? <CommunityAuthorModal author={modal.author} items={communityItems} onSelect={(item) => setModal({ kind: 'community-detail', item })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal?.kind === 'case' ? <CaseDetailModal item={modal.item} onOpenCourse={openCaseCourse} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'works-course' ? <WorksCourseModal selectedChapter={selectedWorksChapter} onSelect={setSelectedWorksChapter} onStart={openWorksReader} unlocked={hasCourseAccess(works)} user={session} onLogin={() => setAuthMode(login)} onAuthenticated={setSession} onNotify={notify} /> : modal === 'works-reader' ? <CourseReader chapter={selectedWorksChapter} details={worksDetails} loadError={worksLoadError} completedChapters={completedWorksChapters} courseTitle="workbuddy进阶实战之作品" courseId="works" chapters={worksChapters} groups={worksCourseGroups} onBack={() => { setModal('works-course'); clearReaderHash() }} onPrevious={() => moveWorksChapter(-1)} onNext={() => moveWorksChapter(1)} onComplete={completeWorksChapter} onJump={jumpWorksChapter} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => { setModal('course'); clearReaderHash() }} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} onJump={jumpChapter} /> : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
+      {modal && <div className="modal-backdrop" onClick={closeModal}><div className={`modal ${modal === 'course' ? 'course-modal' : ''} ${modal === 'reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'paid-course' ? 'paid-course-modal' : ''} ${modal === 'career-course' ? 'course-modal' : ''} ${modal === 'works-course' ? 'course-modal' : ''} ${modal === 'works-reader' || modal?.kind === 'paid-reader' ? 'course-reader-modal' : ''} ${modal?.kind === 'case' ? 'case-modal' : ''} ${['knowledge-center', 'community-center'].includes(modal) ? 'content-center-modal' : ''} ${modal?.kind === 'knowledge' ? 'knowledge-modal' : ''} ${modal?.kind === 'community-detail' ? 'community-modal' : ''} ${modal?.kind === 'author' ? 'author-modal' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={closeModal} aria-label="关闭"><X size={22} /></button>{modal === 'submit' ? <ContributionModal user={session} onClose={() => setModal(null)} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal === 'course-center' ? <CourseCenterModal courses={courseCatalog} onOpen={openCatalogCourse} /> : modal === 'skills' ? <SkillGalleryModal items={skills} onSelect={(skill) => setModal({ kind: 'skill', skill })} /> : modal === 'knowledge-center' ? <KnowledgeCenterModal items={knowledgeItems} savedIds={knowledgeSaved} learnedIds={knowledgeLearned} onSelect={(item) => setModal({ kind: 'knowledge', item })} /> : modal === 'community-center' ? <CommunityCenterModal items={communityItems} savedIds={saved} likedIds={communityLiked} onSelect={(item) => setModal({ kind: 'community-detail', item })} onSubmit={() => setModal('submit')} /> : modal?.kind === 'knowledge' ? <KnowledgeDetailModal item={modal.item} saved={knowledgeSaved.includes(modal.item.id)} learned={knowledgeLearned.includes(modal.item.id)} onToggleSave={toggleKnowledgeSaved} onToggleLearn={toggleKnowledgeLearned} onOpenCourse={openKnowledgeCourse} onOpenCase={openKnowledgeCase} onNotify={notify} /> : modal?.kind === 'community-detail' ? <CommunityDetailModal item={modal.item} saved={saved.includes(modal.item.id)} liked={communityLiked.includes(modal.item.id)} onToggleSave={toggleSave} onToggleLike={toggleCommunityLike} onOpenCourse={openCaseCourse} onOpenAuthor={(author) => setModal({ kind: 'author', author })} onAddComment={addCommunityComment} onLogin={() => setAuthMode('login')} onNotify={notify} /> : modal?.kind === 'author' ? <CommunityAuthorModal author={modal.author} items={communityItems} onSelect={(item) => setModal({ kind: 'community-detail', item })} /> : modal?.kind === 'skill' ? <SkillDetailModal skill={modal.skill} onNotify={notify} /> : modal?.kind === 'case' ? <CaseDetailModal item={modal.item} onOpenCourse={openCaseCourse} /> : modal === 'image-course' ? <ImageCourseModal unlocked={hasCourseAccess('image')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} onOpenChapter={(chapter) => openPaidChapter('image', chapter)} /> : modal === 'career-course' ? <CareerCourseModal unlocked={hasCourseAccess('career')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} onOpenChapter={(chapter) => openPaidChapter('career', chapter)} /> : modal === 'works-course' ? <WorksCourseModal selectedChapter={selectedWorksChapter} onSelect={setSelectedWorksChapter} onStart={openWorksReader} unlocked={hasCourseAccess('works')} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onNotify={notify} /> : modal === 'works-reader' ? <CourseReader chapter={selectedWorksChapter} details={worksDetails} loadError={worksLoadError} completedChapters={completedWorksChapters} courseTitle="workbuddy进阶实战之作品" courseId="works" chapters={worksChapters} groups={worksCourseGroups} onBack={() => { setModal('works-course'); clearReaderHash() }} onPrevious={() => moveWorksChapter(-1)} onNext={() => moveWorksChapter(1)} onComplete={completeWorksChapter} onJump={jumpWorksChapter} /> : modal === 'course' ? <CourseModal selectedChapter={selectedChapter} onSelect={setSelectedChapter} onStart={openReader} /> : modal === 'reader' ? <CourseReader chapter={selectedChapter} details={courseDetails} loadError={courseLoadError} completedChapters={completedChapters} onBack={() => { setModal('course'); clearReaderHash() }} onPrevious={() => moveChapter(-1)} onNext={() => moveChapter(1)} onComplete={completeChapter} onJump={jumpChapter} /> : modal?.kind === 'paid-reader' ? (() => { const readerCourse = paidCourses[modal.courseId]; const readerChapter = paidCourseChapters[modal.courseId]?.find((item) => item.number === modal.chapterNumber) || paidCourseChapters[modal.courseId]?.[0]; return <PaidCourseReader courseId={modal.courseId} course={readerCourse} chapter={readerChapter} completedChapters={completedPaidChapters} onBack={() => { setModal(modal.courseId === 'image' ? 'image-course' : 'career-course'); clearReaderHash() }} onPrevious={() => movePaidChapter(modal.courseId, -1)} onNext={() => movePaidChapter(modal.courseId, 1)} onComplete={() => completePaidChapter(modal.courseId, readerChapter)} onJump={(chapter) => jumpPaidChapter(modal.courseId, chapter)} onNotify={notify} /> })() : modal?.kind === 'paid-course' ? <PaidCourseModal course={modal.course} unlocked={hasCourseAccess(modal.course.id)} user={session} onLogin={() => setAuthMode('login')} onAuthenticated={setSession} onClose={() => setModal(null)} onNotify={notify} /> : <><span className="modal-icon"><CheckCircle size={26} /></span><h2>{modal.title}</h2><p>{modal.description}</p><div className="modal-course-meta"><span>作者：{modal.author}</span><span>难度：{modal.difficulty}</span><span>可节省：{modal.saved}</span></div><button className="button button-primary full" onClick={() => { setModal(null); notify('已加入我的实践') }}>开始复现</button></>}</div></div>}
       {authMode && <AuthModal initialMode={authMode} inviteCode={new URLSearchParams(window.location.search).get('invite') || ''} onClose={() => setAuthMode(null)} onAuthenticated={setSession} onNotify={notify} />}
       {adminData && session?.role === 'admin' && <AdminPanel data={adminData} loading={adminLoading} onRefresh={refreshAdmin} onReview={handleReview} onGenerateCodes={handleGenerateCodes} onClose={() => setAdminData(null)} />}
       {toast && <div className="toast"><CheckCircle size={18} weight="fill" />{toast}</div>}

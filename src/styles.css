@@ -336,6 +336,9 @@ h1 em { color: var(--orange); font-style: normal; }
 .course-value b { color: var(--deep-orange); font-size: 11px; }
 .course-value strong { color: #5f4b40; font-size: 12px; line-height: 1.6; }
 .course-modal-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); gap: 20px; min-height: 490px; }
+.course-directory-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .72fr); gap: 22px; min-height: 520px; }
+.course-directory-layout .course-chapter-list { max-height: 560px; }
+.paid-directory-preview { position: sticky; top: 0; align-self: start; }
 .course-chapter-list { display: grid; gap: 15px; max-height: 510px; padding-right: 8px; overflow: auto; }
 .course-search { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 11px; border: 1px solid #efd9cc; border-radius: 10px; background: #fffaf7; color: #a48879; }
 .course-search:focus-within { border-color: var(--orange); box-shadow: 0 0 0 3px #fff0e7; }
@@ -413,7 +416,20 @@ h1 em { color: var(--orange); font-style: normal; }
 .course-detail-tip { display: flex; align-items: start; gap: 7px; margin: 22px 0; color: #856d60; font-size: 11px; line-height: 1.55; }
 .course-detail-tip svg { flex: 0 0 auto; color: var(--green); }
 .course-reader-modal { width: min(1300px, 100%); max-height: calc(100vh - 20px); overflow: auto; padding: 0; }
+.modal:has(.paid-course-reader-content) { width: min(1300px, 100%); max-height: calc(100vh - 20px); overflow: hidden; padding: 0; }
+.modal:has(.image-course-content), .modal:has(.career-course-content) { width: min(1180px, 100%); max-height: min(900px, calc(100vh - 40px)); overflow: auto; padding: 30px; }
 .course-reader-content { display: grid; min-height: 620px; }
+.paid-course-reader-content { min-height: calc(100vh - 20px); }
+.paid-course-reader-main { min-width: 0; }
+.paid-reader-lesson-intro { margin: 25px 0 18px; padding: 18px 20px; border-left: 3px solid var(--orange); border-radius: 0 12px 12px 0; background: #fff4ed; }
+.paid-reader-lesson-intro .eyebrow { margin-bottom: 7px; }
+.paid-reader-lesson-intro h3 { margin: 0 0 8px; font-size: 21px; }
+.paid-reader-lesson-intro > p:last-child { max-width: 720px; margin: 0; color: #755f53; font-size: 13px; line-height: 1.75; }
+.paid-reader-key-cards { margin-top: 0; }
+.paid-reader-prompt { margin-top: 22px; }
+.paid-reader-rules { margin-top: 22px; }
+.paid-reader-examples { margin-top: 22px; }
+.paid-reader-start { margin-top: 20px; }
 .course-reader-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 68px 18px 32px; border-bottom: 1px solid var(--line); }
 .course-reader-back { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--deep-orange); font-size: 12px; font-weight: 900; }
 .course-reader-progress { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 11px; }
@@ -774,6 +790,8 @@ h1 em { color: var(--orange); font-style: normal; }
   .course-modal-stats { margin-top: 20px; gap: 9px; }
   .course-modal-stats span { min-width: 58px; padding-left: 8px; }
   .course-modal-layout { grid-template-columns: 1fr; min-height: 0; }
+  .course-directory-layout { grid-template-columns: 1fr; min-height: 0; }
+  .paid-directory-preview { position: static; }
   .course-chapter-list { max-height: 340px; padding-right: 0; }
   .course-detail { padding: 20px; }
   .course-reader-header { align-items: start; flex-direction: column; padding: 22px 52px 16px 18px; gap: 12px; }
@@ -791,6 +809,8 @@ h1 em { color: var(--orange); font-style: normal; }
   .course-reader-footer { flex-wrap: wrap; padding: 15px 18px 18px; }
   .course-reader-footer .course-reader-complete { order: -1; width: 100%; justify-content: center; }
   .modal:has(.paid-course-content) { padding: 25px 18px 18px; }
+  .modal:has(.image-course-content), .modal:has(.career-course-content), .modal:has(.paid-course-reader-content) { width: 100%; max-height: calc(100vh - 20px); padding: 25px 18px 18px; }
+  .modal:has(.paid-course-reader-content) { padding: 0; }
   .paid-course-grid { grid-template-columns: 1fr; }
   .session-actions { gap: 4px; }
   .session-name { display: none; }
