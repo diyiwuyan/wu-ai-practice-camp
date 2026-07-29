@@ -26,8 +26,8 @@ import { worksCourseGroups, worksCourseStats } from './worksCourseContent'
 import { worksCourseDetails } from './worksCourseDetails'
 import { hydrateCourseEmbeds } from './courseEmbeds'
 import { careerCourseCase, careerCourseDeliverables, careerCourseGroups, careerCoursePrompts, careerCourseResumeExamples, careerCourseStats, careerCourseVisuals } from './careerCourseContent'
-import { imageCourseChapterContent, imageCourseExamples, imageCourseGroups, imageCoursePrompts, imageCourseStats, imagePromptCardAppendix, imagePromptRules } from './imageCourseContent'
-import { careerLessonContent, imageLessonContent } from './courseLessonContent'
+import { imageCourseChapterContent, imageCourseGroups, imageCoursePrompts, imageCourseStats, imageLessonContent, imagePromptCardAppendix } from './imageTrainingContent'
+import { careerLessonContent } from './courseLessonContent'
 import { addSubmissionComment, createRedemptionCodes, createSubmission, getAdminDashboard, getPublishedSubmissions, getReferralSummary, getSession, getSubmissionComments, grantCourse, isDemoAuth, logout, redeemPoints, requestAuthCode, reviewSubmission, toggleSubmissionLike, unlockCourse, verifyAuthCode } from './community'
 import { knowledgeItems, knowledgeTypes } from './knowledgeContent'
 import { skillCatalog, skillCategories } from './skillCatalog'
@@ -113,12 +113,12 @@ const paidCourses = {
   },
   image: {
     id: 'image',
-    title: 'AI 生图工作流训练营',
-    description: '从平台和模型选型，到提示词规范、行业案例、系列素材、图片转提示词插件和交付验收，练出一套可复用的视觉生产方法。',
-    audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '积分课程', label: '积分解锁', cover: 'assets/image-example-course-poster.png', benefit: '独立完成一套可发布、可复用的视觉素材',
+    title: 'AI生图训练营',
+    description: '从 ChatGPT Image 的基础功能、万能提示词、商业精修到电商、知识付费、PPT 与真实商单，完整迁入原课 377 张案例图。',
+    audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '积分课程', label: '积分解锁', cover: 'assets/image-course-feishu/lesson1-02.png', benefit: '完成一套可发布、可报价、可复用的 AI 生图作品',
     price: { original: 199, sale: 49.9 },
-    outputs: ['一套生图提示词规范', '30+ 个行业提示词模板', 'PromptCard 图片转提示词插件实操', '电商、内容、课程海报作品集'],
-    syllabus: ['平台与模型选择', '提示词十段式与迭代规范', '行业案例与系列组图', 'PromptCard 安装、分析与改写', '作品集和商业交付'],
+    outputs: ['从需求到精修的一套商业生图流程', '电商、海报、知识付费、PPT 与知识卡真实案例', 'PromptCard 参考图反推实操', '原课程 377 张图片与提示词图册'],
+    syllabus: ['开营与基础功能', '万能公式与商业精修', '电商、设计、知识付费场景', 'PPT 与真实知识卡商单', 'PromptCard 与完整提示词图册'],
     chapters: imageCourseGroups.flatMap((group) => group.chapters.map((chapter) => chapter.title)),
     cta: '使用积分解锁',
   },
@@ -452,6 +452,25 @@ function ImagePromptCardGuide({ onNotify }) {
   </section>
 }
 
+function imageChapterLabel(number) {
+  if (number === '00') return '开营'
+  if (number === 'A' || number === 'B') return `附录 ${number}`
+  return `第 ${number} 章`
+}
+
+function ImageExampleGallery({ examples, title, summary, onNotify }) {
+  const [expanded, setExpanded] = useState(false)
+  useEffect(() => setExpanded(false), [examples])
+  if (!examples?.length) return null
+  const visibleExamples = expanded ? examples : examples.slice(0, 12)
+  return <section className="image-example-section">
+    <div className="prompt-library-heading"><b>{title}</b><small>{summary} · 共 {examples.length} 张原课图片</small></div>
+    <div className="image-example-grid">{visibleExamples.map((example) => <article key={example.title}><img src={example.image} alt={example.title} loading="lazy" /><span>{example.type}</span><b>{example.title}</b><p>{example.takeaway}</p><button className="text-link" onClick={() => { navigator.clipboard?.writeText(example.prompt); onNotify('案例提示词已复制') }}>复制案例 Prompt <ArrowRight size={15} /></button></article>)}</div>
+    {examples.length > visibleExamples.length && <button className="button button-outline small image-gallery-expand" onClick={() => setExpanded(true)}>查看全部 {examples.length} 张原课图片 <ArrowRight size={15} /></button>}
+    {expanded && examples.length > 12 && <button className="text-link image-gallery-collapse" onClick={() => setExpanded(false)}>收起图册</button>}
+  </section>
+}
+
 function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify, onOpenChapter }) {
   const chapters = imageCourseGroups.flatMap((group) => group.chapters)
   const [selected, setSelected] = useState(chapters[0])
@@ -463,8 +482,8 @@ function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify, 
         <div>
           <span className="modal-icon"><Sparkle size={26} /></span>
           <p className="eyebrow orange"><span /> 积分课程 · {unlocked ? '已解锁' : '可解锁'}</p>
-          <h2>AI 生图工作流训练营</h2>
-          <p>从平台和模型选型，到分行业提示词，再到系列素材和交付验收，练出一套真正能用于工作和作品集的生图方法。</p>
+          <h2>AI生图训练营</h2>
+          <p>完整迁入原课：从基础功能、万能提示词和商业精修，到电商、设计、知识付费、PPT、真实商单，以及参考图反推与提示词图册。</p>
           <div className="course-value"><b>学完你会</b><strong>{paidCourses.image.benefit}</strong></div>
         </div>
         <div className="course-modal-stats">{imageCourseStats.map(([value, label]) => <span key={label}><strong>{value}</strong><small>{label}</small></span>)}</div>
@@ -474,14 +493,14 @@ function ImageCourseModal({ unlocked, user, onLogin, onAuthenticated, onNotify, 
           {imageCourseGroups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((chapter) => <button key={chapter.number} className={'course-chapter ' + (selected.number === chapter.number ? 'selected' : '')} onClick={() => { setSelected(chapter); setPrompt((imageCourseChapterContent[chapter.number]?.prompts || imageCoursePrompts)[0]); if (unlocked) onOpenChapter?.(chapter) }}><span>{chapter.number}</span><span><b>{chapter.title}</b><small>{chapter.level} · {chapter.time}</small></span><ArrowRight size={16} /></button>)}</section>)}
         </div>
         <article className="course-detail image-course-detail">
-          <span className="course-detail-number">{selected.number === 'A' ? '附录 A' : `第 ${selected.number} 章`}</span>
+          <span className="course-detail-number">{imageChapterLabel(selected.number)}</span>
           <h3>{selected.title}</h3>
           <p className="course-detail-intro">{selected.intro}</p>
           {unlocked ? <><div className="course-detail-block"><b>马上练习</b><p>{selected.exercise}</p></div><div className="course-detail-block"><b>本章产出</b><p>{selected.output}</p></div>{selected.plugin && <ImagePromptCardGuide onNotify={onNotify} />}<div className="prompt-library">
             <div className="prompt-library-heading"><b>本章专属提示词</b><select value={prompt.label} onChange={(event) => setPrompt(selectedContent.prompts.find((item) => item.label === event.target.value) || selectedContent.prompts[0])}>{selectedContent.prompts.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div>
             <code>{prompt.prompt}</code>
             <button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('提示词模板已复制') }}>复制模板 <ArrowRight size={15} /></button>
-          </div><section className="prompt-rules"><b>本章方法要点</b><div>{selectedContent.rules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section><section className="image-example-section"><div className="prompt-library-heading"><b>{selectedContent.caseTitle}</b><small>{selectedContent.caseSummary}</small></div><div className="image-example-grid">{selectedContent.examples.map((example) => <article key={example.title}><img src={example.image} alt={example.title} /><span>{example.type}</span><b>{example.title}</b><p>{example.takeaway}</p><button className="text-link" onClick={() => { navigator.clipboard?.writeText(example.prompt); onNotify('案例提示词已复制') }}>复制案例 Prompt <ArrowRight size={15} /></button></article>)}</div></section><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 本章完成标准：{selectedContent.acceptance}</div></> : <div className="course-lock-note"><Sparkle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、提示词规范、行业模板和示例图，报名后解锁。</p></div>}
+          </div><section className="prompt-rules"><b>本章方法要点</b><div>{selectedContent.rules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section><ImageExampleGallery examples={selectedContent.examples} title={selectedContent.caseTitle} summary={selectedContent.caseSummary} onNotify={onNotify} /><div className="course-detail-tip"><CheckCircle size={17} weight="fill" /> 本章完成标准：{selectedContent.acceptance}</div></> : <div className="course-lock-note"><Sparkle size={19} /><b>本章内容已上线</b><p>当前展示课程目录与章节简介。完整练习、提示词规范、行业模板和示例图，报名后解锁。</p></div>}
           {unlocked ? <div className="course-unlocked-note"><CheckCircle size={18} weight="fill" /> 生图训练营已解锁，可以开始学习。</div> : <EnrollmentOffer course={paidCourses.image} user={user} onLogin={onLogin} onAuthenticated={onAuthenticated} onNotify={onNotify} />}
         </article>
       </div>
@@ -650,12 +669,12 @@ function PaidCourseReader({ courseId, course, chapter, completedChapters, onBack
     <div className="course-reader-body">
       <aside className="course-reader-chapter-sidebar"><div className="course-reader-sidebar-heading">课程目录</div>{groups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((item) => <button key={item.number} className={'course-chapter ' + (chapter.number === item.number ? 'selected' : '') + (completedChapters.includes(courseId + ':' + item.number) ? ' completed' : '')} onClick={() => onJump(item)}><span>{item.number}</span><span><b>{item.title}</b><small>{item.level} · {item.time}</small></span>{completedChapters.includes(courseId + ':' + item.number) ? <CheckCircle size={15} weight="fill" /> : <ArrowRight size={15} />}</button>)}</section>)}</aside>
       <article className="course-reader-main paid-course-reader-main">
-        <div className="course-reader-chapter-header"><span className="course-detail-number">{chapter.number === 'A' ? '附录 A' : '第 ' + chapter.number + ' 章'} · {chapter.level}</span><h1>{chapter.title}</h1><p>{chapter.intro}</p><div className="course-reader-chapter-meta"><span>{chapter.time}</span><span>本章产出：{chapter.output}</span></div></div>
-        <div className="course-reader-source-note"><span>{courseId === 'image' ? '生图训练营课程正文' : '大学生求职 AI 课正文'}</span><span>目录、案例、Prompt 和验收工具已整合</span></div>
+        <div className="course-reader-chapter-header"><span className="course-detail-number">{courseId === 'image' ? imageChapterLabel(chapter.number) : '第 ' + chapter.number + ' 章'} · {chapter.level}</span><h1>{chapter.title}</h1><p>{chapter.intro}</p><div className="course-reader-chapter-meta"><span>{chapter.time}</span><span>本章产出：{chapter.output}</span></div></div>
+        <div className="course-reader-source-note"><span>{courseId === 'image' ? 'AI生图训练营 · 原课内容与原图' : '大学生求职 AI 课正文'}</span><span>目录、案例、Prompt 和验收工具已整合</span></div>
         <section className="paid-reader-lesson-intro"><p className="eyebrow orange"><span /> 本章学习目标</p><h3>{courseId === 'career' ? '把经历变成可投递、可复盘的材料' : '先看懂，再做出自己的结果'}</h3><p>{courseId === 'career' ? '本页沿用求职分享材料里的岗位定位、证据库、简历、投递和面试训练逻辑；AI 只负责整理、模拟和复盘，不替你编造经历，也不替你做职业决定。' : '本页把本章的目标、练习、Prompt、案例和验收标准放在同一个学习空间里。不要只复制答案，先用自己的素材做一遍，再回看哪里需要调整。'}</p></section>
         <section className="course-reader-grid paid-reader-key-cards"><section className="course-reader-card"><span>01</span><h4>马上练习</h4><p>{chapter.exercise}</p></section><section className="course-reader-card"><span>02</span><h4>本章产出</h4><p>{chapter.output}</p></section>{chapter.acceptance && <section className="course-reader-card"><span>03</span><h4>验收标准</h4><p>{chapter.acceptance}</p></section>}</section>
         <CourseLessonBody courseId={courseId} chapter={chapter} />
-        {courseId === 'image' && <><section className="image-chapter-case"><div><p className="eyebrow orange"><span /> 本章案例</p><h3>{chapterContent.caseTitle}</h3><p>{chapterContent.caseSummary}</p><ol>{chapterContent.steps.map((step) => <li key={step}>{step}</li>)}</ol></div><img src={exampleItems[0]?.image} alt={exampleItems[0]?.title || chapter.title} /></section><section className="prompt-library paid-reader-prompt"><div className="prompt-library-heading"><b>本章专属提示词</b><select value={prompt.label} onChange={(event) => setPrompt(promptItems.find((item) => item.label === event.target.value) || promptItems[0])}>{promptItems.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('本章 Prompt 已复制') }}>复制本章 Prompt <ArrowRight size={15} /></button></section><section className="prompt-rules paid-reader-rules"><b>本章提示词规范</b><div>{chapterContent.rules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section>{chapter.plugin && <ImagePromptCardGuide onNotify={onNotify} />}<section className="image-example-section paid-reader-examples"><div className="prompt-library-heading"><b>本章示例图与练习素材</b><small>{exampleItems.length} 张对应本章的图</small></div><div className="image-example-grid">{exampleItems.map((example) => <article key={example.title}><img src={example.image} alt={example.title} /><span>{example.type}</span><b>{example.title}</b><p>{example.takeaway}</p><button className="text-link" onClick={() => { navigator.clipboard?.writeText(example.prompt); onNotify('本章案例 Prompt 已复制') }}>复制案例 Prompt <ArrowRight size={15} /></button></article>)}</div></section></>}
+        {courseId === 'image' && <><section className="image-chapter-case"><div><p className="eyebrow orange"><span /> 本章案例</p><h3>{chapterContent.caseTitle}</h3><p>{chapterContent.caseSummary}</p><ol>{chapterContent.steps.map((step) => <li key={step}>{step}</li>)}</ol></div>{exampleItems[0] && <img src={exampleItems[0].image} alt={exampleItems[0].title} />}</section><section className="prompt-library paid-reader-prompt"><div className="prompt-library-heading"><b>本章专属提示词</b><select value={prompt.label} onChange={(event) => setPrompt(promptItems.find((item) => item.label === event.target.value) || promptItems[0])}>{promptItems.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('本章 Prompt 已复制') }}>复制本章 Prompt <ArrowRight size={15} /></button></section><section className="prompt-rules paid-reader-rules"><b>本章提示词规范</b><div>{chapterContent.rules.map(([title, detail]) => <article key={title}><strong>{title}</strong><p>{detail}</p></article>)}</div></section>{chapter.plugin && <ImagePromptCardGuide onNotify={onNotify} />}<ImageExampleGallery examples={exampleItems} title="本章示例图与练习素材" summary="对应本章" onNotify={onNotify} /></>}
         {courseId === 'career' && <section className="prompt-library paid-reader-prompt"><div className="prompt-library-heading"><b>本章求职 Prompt 模板</b><select value={prompt.label} onChange={(event) => setPrompt(promptItems.find((item) => item.label === event.target.value) || promptItems[0])}>{promptItems.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}</select></div><code>{prompt.prompt}</code><button className="text-link" onClick={() => { navigator.clipboard?.writeText(prompt.prompt); onNotify('本章求职 Prompt 已复制') }}>复制本章 Prompt <ArrowRight size={15} /></button></section>}
         {courseId === 'career' && chapter.number === '01' && <CareerCourseMaterials />}
         <section className="course-reader-checklist"><h4>{courseId === 'career' ? '完成本章的三个动作' : '完成本章的三个动作'}</h4><ol>{courseId === 'career' ? <><li>只使用自己的真实经历，先补齐事实、结果、附件和待核验信息。</li><li>按本章练习完成一遍，保存岗位版本、Prompt、反馈和修改原因。</li><li>换一个目标岗位再检查一遍，确认材料可解释、可追问、不可夸大。</li></> : <><li>先准备真实输入材料，写清用途、受众、交付格式和限制条件。</li><li>按本章练习完成一遍，保存过程稿、Prompt、结果和修改原因。</li><li>换成自己的任务再做一遍，用验收标准检查，不合格就只改一个变量。</li></>}</ol></section>

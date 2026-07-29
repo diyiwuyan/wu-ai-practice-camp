@@ -576,6 +576,8 @@ h1 em { color: var(--orange); font-style: normal; }
 .image-example-grid article > b { margin-top: 4px; font-size: 11px; }
 .image-example-grid article > p { margin-top: 5px; margin-bottom: 8px; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .image-example-grid .text-link { margin: 0 10px 11px; font-size: 10px; }
+.image-gallery-expand { display: flex; align-items: center; gap: 6px; margin: 14px auto 0; }
+.image-gallery-collapse { display: block; margin: 12px auto 0; }
 .promptcard-guide { margin-top: 18px; padding: 15px; border: 1px solid #efb18f; border-radius: 12px; background: #fff8f3; }
 .promptcard-guide-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .promptcard-guide-heading b, .promptcard-guide-heading small { display: block; }
