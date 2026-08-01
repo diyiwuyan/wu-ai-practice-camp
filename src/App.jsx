@@ -26,6 +26,7 @@ import { freeCourseGroups, freeCourseStats } from './courseContent'
 import { worksCourseGroups, worksCourseStats } from './worksCourseContent'
 import { worksCourseDetails } from './worksCourseDetails'
 import { codexAdvancedGroups, codexAdvancedStats, codexEntryGroups, codexEntryStats, codexLessonContent } from './codexCourseContent'
+import { codexEntryOrangeBook } from './codexOrangeBook'
 import { hydrateCourseEmbeds } from './courseEmbeds'
 import { careerCourseCase, careerCourseDeliverables, careerCourseGroups, careerCoursePrompts, careerCourseResumeExamples, careerCourseStats, careerCourseVisuals } from './careerCourseContent'
 import { imageCourseChapterContent, imageCourseGroups, imageCoursePrompts, imageCourseStats, imageLessonContent, imagePromptCardAppendix } from './imageTrainingContent'
@@ -784,10 +785,12 @@ const paidCourseChapters = {
 
 function CourseLessonBody({ courseId, chapter }) {
   const content = courseId === 'career' ? careerLessonContent[chapter.number] : courseId === 'image' ? imageLessonContent[chapter.number] : codexLessonContent[courseId]?.[chapter.number]
+  const orangeBook = courseId === 'codex-entry' ? codexEntryOrangeBook[chapter.number] : null
   if (!content) return null
   return <section className={'course-lesson-body ' + (courseId === 'career' ? 'career-lesson-body' : courseId === 'image' ? 'image-lesson-body' : 'codex-lesson-body')}>
     <div className="course-lesson-heading"><p className="eyebrow orange"><span /> 课堂正文</p><h2>{content.title}</h2><p>{content.lead}</p></div>
     {content.why && <section className="course-lesson-why"><b>这一节为什么重要</b><p>{content.why}</p></section>}
+    {orangeBook && <section className="codex-orange-book-card"><div className="codex-orange-book-heading"><span>橙皮书知识补充</span><h3>{orangeBook.title}</h3><p>{orangeBook.intro}</p></div><ul>{orangeBook.points.map((point) => <li key={point}>{point}</li>)}</ul><div className="codex-orange-book-table"><div className="codex-orange-book-row codex-orange-book-row-head"><b>主题</b><b>说明</b>{orangeBook.rows[0]?.length === 3 && <b>入门判断</b>}</div>{orangeBook.rows.map((row) => <div className={'codex-orange-book-row ' + (row.length === 2 ? 'two' : '')} key={row.join('-')}>{row.map((cell) => <span key={cell}>{cell}</span>)}</div>)}</div></section>}
     {content.visual && <figure className="codex-lesson-visual">{content.visual.image && <img src={content.visual.image} alt={content.visual.title} />}<figcaption><span>{content.visual.label}</span><strong>{content.visual.title}</strong><p>{content.visual.caption}</p><div className="codex-visual-steps">{content.visual.steps.map((step) => <div key={step.label}><small>{step.label}</small><b>{step.value}</b></div>)}</div></figcaption></figure>}
     <div className="course-lesson-sections">{content.sections.map(([title, detail, points]) => <article key={title}><h3>{title}</h3><p>{detail}</p><ul>{points.map((point) => <li key={point}>{point}</li>)}</ul></article>)}</div>
     <section className="course-lesson-case"><div><p className="eyebrow orange"><span /> 案例拆解</p><h3>{content.caseTitle}</h3><ol>{content.caseSteps.map((step) => <li key={step}>{step}</li>)}</ol></div><div className="course-lesson-output"><b>本章要交付</b><p>{content.output}</p></div></section>
