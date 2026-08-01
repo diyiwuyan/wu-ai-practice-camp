@@ -3,6 +3,7 @@ import { marked } from 'marked'
 import {
   ArrowRight,
   ArrowLeft,
+  ArrowUpRight,
   Bell,
   BookOpen,
   BookmarkSimple,
@@ -786,8 +787,12 @@ function CourseLessonBody({ courseId, chapter }) {
   if (!content) return null
   return <section className={'course-lesson-body ' + (courseId === 'career' ? 'career-lesson-body' : courseId === 'image' ? 'image-lesson-body' : 'codex-lesson-body')}>
     <div className="course-lesson-heading"><p className="eyebrow orange"><span /> 课堂正文</p><h2>{content.title}</h2><p>{content.lead}</p></div>
+    {content.why && <section className="course-lesson-why"><b>这一节为什么重要</b><p>{content.why}</p></section>}
+    {content.visual && <figure className="codex-lesson-visual">{content.visual.image && <img src={content.visual.image} alt={content.visual.title} />}<figcaption><span>{content.visual.label}</span><strong>{content.visual.title}</strong><p>{content.visual.caption}</p><div className="codex-visual-steps">{content.visual.steps.map((step) => <div key={step.label}><small>{step.label}</small><b>{step.value}</b></div>)}</div></figcaption></figure>}
     <div className="course-lesson-sections">{content.sections.map(([title, detail, points]) => <article key={title}><h3>{title}</h3><p>{detail}</p><ul>{points.map((point) => <li key={point}>{point}</li>)}</ul></article>)}</div>
     <section className="course-lesson-case"><div><p className="eyebrow orange"><span /> 案例拆解</p><h3>{content.caseTitle}</h3><ol>{content.caseSteps.map((step) => <li key={step}>{step}</li>)}</ol></div><div className="course-lesson-output"><b>本章要交付</b><p>{content.output}</p></div></section>
+    {content.pitfalls?.length > 0 && <section className="codex-lesson-bottom-grid"><article className="codex-lesson-pitfalls"><b>新手最容易踩的坑</b><ul>{content.pitfalls.map((item) => <li key={item}>{item}</li>)}</ul></article>{content.checkpoint?.length > 0 && <article className="codex-lesson-checkpoint"><b>完成后自测</b><ul>{content.checkpoint.map((item) => <li key={item}>{item}</li>)}</ul></article>}</section>}
+    {content.resources?.length > 0 && <div className="codex-lesson-resources"><b>继续阅读官方资料</b>{content.resources.map((resource) => <a key={resource.url} href={resource.url} target="_blank" rel="noreferrer">{resource.title} <ArrowUpRight size={14} /></a>)}</div>}
   </section>
 }
 
@@ -819,7 +824,7 @@ function PaidCourseReader({ courseId, course, chapter, completedChapters, onBack
       <aside className="course-reader-chapter-sidebar"><div className="course-reader-sidebar-heading">课程目录</div>{groups.map((group) => <section key={group.part} className="course-group"><div className="course-group-heading"><div><b>{group.part}</b><small>{group.summary}</small></div><em>{group.range}</em></div>{group.chapters.map((item) => <button key={item.number} className={'course-chapter ' + (chapter.number === item.number ? 'selected' : '') + (completedChapters.includes(courseId + ':' + item.number) ? ' completed' : '')} onClick={() => onJump(item)}><span>{item.number}</span><span><b>{item.title}</b><small>{item.level} · {item.time}</small></span>{completedChapters.includes(courseId + ':' + item.number) ? <CheckCircle size={15} weight="fill" /> : <ArrowRight size={15} />}</button>)}</section>)}</aside>
       <article className="course-reader-main paid-course-reader-main">
         <div className="course-reader-chapter-header"><span className="course-detail-number">{courseId === 'image' ? imageChapterLabel(chapter.number) : '第 ' + chapter.number + ' 章'} · {chapter.level}</span><h1>{chapter.title}</h1><p>{chapter.intro}</p><div className="course-reader-chapter-meta"><span>{chapter.time}</span><span>本章产出：{chapter.output}</span></div></div>
-        <div className="course-reader-source-note"><span>{courseId === 'image' ? 'AI生图训练营 · 原课内容与原图' : courseId === 'career' ? '大学生求职 AI 课正文' : course.title + ' · 课程正文'}</span><span>目录、案例、Prompt 和验收工具已整合</span></div>
+        <div className="course-reader-source-note"><span>{courseId === 'image' ? 'AI生图训练营 · 原课内容与原图' : courseId === 'career' ? '大学生求职 AI 课正文' : course.title + ' · 课堂正文与实战材料'}</span><span>{isCodex ? '图示、案例、Prompt、避坑和官方资料已整合' : '目录、案例、Prompt 和验收工具已整合'}</span></div>
         <section className="paid-reader-lesson-intro"><p className="eyebrow orange"><span /> 本章学习目标</p><h3>{courseId === 'career' ? '把经历变成可投递、可复盘的材料' : isCodex ? '把一个真实任务做成可解释、可验收的结果' : '先看懂，再做出自己的结果'}</h3><p>{courseId === 'career' ? '本页沿用求职分享材料里的岗位定位、证据库、简历、投递和面试训练逻辑；AI 只负责整理、模拟和复盘，不替你编造经历，也不替你做职业决定。' : isCodex ? 'Codex 负责理解、执行和整理产物，但任务边界、权限、版权和最终交付仍由你掌握。每章都要留下过程证据，再把方法迁移到自己的工作。' : '本页把本章的目标、练习、Prompt、案例和验收标准放在同一个学习空间里。不要只复制答案，先用自己的素材做一遍，再回看哪里需要调整。'}</p></section>
         <section className="course-reader-grid paid-reader-key-cards"><section className="course-reader-card"><span>01</span><h4>马上练习</h4><p>{chapter.exercise}</p></section><section className="course-reader-card"><span>02</span><h4>本章产出</h4><p>{chapter.output}</p></section>{chapter.acceptance && <section className="course-reader-card"><span>03</span><h4>验收标准</h4><p>{chapter.acceptance}</p></section>}</section>
         <CourseLessonBody courseId={courseId} chapter={chapter} />
