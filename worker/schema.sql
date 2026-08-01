@@ -4,7 +4,10 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL DEFAULT '',
   role TEXT NOT NULL DEFAULT 'learner',
   status TEXT NOT NULL DEFAULT 'active',
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  password_hash TEXT,
+  password_salt TEXT,
+  updated_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS otp_codes (

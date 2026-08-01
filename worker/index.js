@@ -11,7 +11,7 @@ function corsHeaders(request, env) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Credentials"] = "true";
     headers["Access-Control-Allow-Headers"] = "Content-Type";
-    headers["Access-Control-Allow-Methods"] = "GET,POST,PATCH,OPTIONS";
+    headers["Access-Control-Allow-Methods"] = "GET,POST,PATCH,DELETE,OPTIONS";
   }
   return headers;
 }
@@ -55,6 +55,39 @@ async function sha256(value) {
   const data = new TextEncoder().encode(value);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function randomHex(bytesLength = 16) {
+  const bytes = new Uint8Array(bytesLength);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function passwordHash(password, salt) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 310000, hash: "SHA-256" }, key, 256);
+  return [...new Uint8Array(bits)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function validPassword(password) {
+  return typeof password === "string" && password.length >= 8 && password.length <= 128;
+}
+
+function sameValue(left, right) {
+  if (typeof left !== "string" || typeof right !== "string" || left.length !== right.length) return false;
+  let result = 0;
+  for (let index = 0; index < left.length; index += 1) result |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  return result === 0;
+}
+
+async function createSession(env, userId) {
+  const sessionToken = randomToken();
+  await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(await sha256(sessionToken), userId, Date.now() + SESSION_DAYS * 86400 * 1000, isoNow()).run();
+  return sessionToken;
+}
+
+function basicUser(row) {
+  return { id: row.id, email: row.email, name: row.name, role: row.role, status: row.status, createdAt: row.createdAt || row.created_at };
 }
 
 async function body(request) {
@@ -159,6 +192,69 @@ async function handleApi(request, env, url) {
     return json({ ok: true, message: "验证码已发送，请检查邮箱", name });
   }
 
+  if (request.method === "POST" && route === "auth/password-register") {
+    const payload = await body(request);
+    const email = String(payload.email || "").trim().toLowerCase();
+    const name = String(payload.name || "").trim().slice(0, 40);
+    const password = String(payload.password || "");
+    const inviteCode = String(payload.inviteCode || "").trim().toUpperCase();
+    if (!validEmail(email)) return json({ message: "请输入有效邮箱" }, 400);
+    if (!validPassword(password)) return json({ message: "密码至少 8 位，最多 128 位" }, 400);
+    const existing = await env.DB.prepare("SELECT id, password_hash AS passwordHash, status FROM users WHERE email = ?").bind(email).first();
+    if (existing?.passwordHash) return json({ message: "该邮箱已注册，请直接登录或使用验证码找回密码" }, 409);
+    if (existing?.status === "deleted") return json({ message: "该账号已被删除，如需恢复请联系管理员" }, 403);
+    const adminEmail = String(env.ADMIN_EMAIL || "").trim().toLowerCase();
+    const role = adminEmail && email === adminEmail ? "admin" : "learner";
+    const salt = randomHex();
+    const hash = await passwordHash(password, salt);
+    const id = existing?.id || crypto.randomUUID();
+    const now = isoNow();
+    await env.DB.prepare("INSERT INTO users (id, email, name, role, status, created_at, password_hash, password_salt, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?) ON CONFLICT(email) DO UPDATE SET name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE users.name END, role = CASE WHEN excluded.role = 'admin' THEN 'admin' ELSE users.role END, status = 'active', password_hash = excluded.password_hash, password_salt = excluded.password_salt, updated_at = excluded.updated_at").bind(id, email, name || email.split("@")[0], role, now, hash, salt, now).run();
+    let inviterId = null;
+    if (!existing && inviteCode) {
+      const inviter = await env.DB.prepare("SELECT user_id AS userId FROM referral_profiles WHERE code = ?").bind(inviteCode).first().catch(() => null);
+      inviterId = inviter?.userId || null;
+    }
+    await ensureReferralProfile(env, id, inviterId);
+    const user = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users WHERE id = ?").bind(id).first();
+    const sessionToken = await createSession(env, id);
+    return json({ ok: true, user: await enrichUser(env, user) }, 201, { "Set-Cookie": sessionCookie(sessionToken) });
+  }
+
+  if (request.method === "POST" && route === "auth/password-login") {
+    const payload = await body(request);
+    const email = String(payload.email || "").trim().toLowerCase();
+    const password = String(payload.password || "");
+    if (!validEmail(email) || !password) return json({ message: "请输入邮箱和密码" }, 400);
+    const user = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt, password_hash AS passwordHash, password_salt AS passwordSalt FROM users WHERE email = ?").bind(email).first();
+    if (!user || !user.passwordHash || !user.passwordSalt || !sameValue(await passwordHash(password, user.passwordSalt), user.passwordHash)) return json({ message: "邮箱或密码不正确" }, 401);
+    if (user.status !== "active") return json({ message: user.status === "deleted" ? "该账号已被删除" : "该账号已停用，请联系管理员" }, 403);
+    const sessionToken = await createSession(env, user.id);
+    return json({ ok: true, user: await enrichUser(env, basicUser(user)) }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
+  }
+
+  if (request.method === "POST" && route === "auth/password-reset") {
+    const payload = await body(request);
+    const email = String(payload.email || "").trim().toLowerCase();
+    const code = String(payload.code || "").trim();
+    const password = String(payload.password || "");
+    if (!validEmail(email) || !validPassword(password)) return json({ message: "请输入有效邮箱和至少 8 位的新密码" }, 400);
+    const record = await env.DB.prepare("SELECT * FROM otp_codes WHERE email = ?").bind(email).first();
+    if (!record || record.expires_at < Date.now() || record.attempts >= 5 || !sameValue(await sha256(code), record.code_hash)) {
+      if (record) await env.DB.prepare("UPDATE otp_codes SET attempts = attempts + 1 WHERE email = ?").bind(email).run();
+      return json({ message: "验证码错误或已过期" }, 400);
+    }
+    const user = await env.DB.prepare("SELECT id, email, name, role, status, created_at AS createdAt FROM users WHERE email = ?").bind(email).first();
+    if (!user || user.status !== "active") return json({ message: "该邮箱尚未注册或账号不可用" }, 404);
+    const salt = randomHex();
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM otp_codes WHERE email = ?").bind(email),
+      env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?").bind(await passwordHash(password, salt), salt, isoNow(), user.id),
+    ]);
+    const sessionToken = await createSession(env, user.id);
+    return json({ ok: true, user: await enrichUser(env, user) }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
+  }
+
   if (request.method === "POST" && route === "auth/verify-code") {
     const payload = await body(request);
     const email = String(payload.email || "").trim().toLowerCase();
@@ -183,8 +279,7 @@ async function handleApi(request, env, url) {
       inviterId = inviter?.userId || null;
     }
     await ensureReferralProfile(env, user.id, inviterId);
-    const sessionToken = randomToken();
-    await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(await sha256(sessionToken), user.id, Date.now() + SESSION_DAYS * 86400 * 1000, isoNow()).run();
+    const sessionToken = await createSession(env, user.id);
     return json({ ok: true, user: await enrichUser(env, user) }, 200, { "Set-Cookie": sessionCookie(sessionToken) });
   }
 
@@ -366,14 +461,109 @@ async function handleApi(request, env, url) {
     return json({ ok: true, points, codes: records.map(({ code, points: value }) => ({ code, points: value })) }, 201);
   }
 
+  if (request.method === "POST" && route === "admin/users") {
+    const admin = await currentUser(request, env);
+    if (!admin || admin.role !== "admin") return json({ message: "无管理员权限" }, 403);
+    const payload = await body(request);
+    const email = String(payload.email || "").trim().toLowerCase();
+    const name = String(payload.name || "").trim().slice(0, 40);
+    const password = String(payload.password || "");
+    const role = payload.role === "admin" ? "admin" : "learner";
+    const initialPoints = Number(payload.points || 0);
+    if (!validEmail(email)) return json({ message: "请输入有效邮箱" }, 400);
+    if (password && !validPassword(password)) return json({ message: "初始密码至少 8 位" }, 400);
+    if (!Number.isFinite(initialPoints) || initialPoints < 0 || initialPoints > 100000) return json({ message: "初始积分需在 0 到 100000 之间" }, 400);
+    const exists = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+    if (exists) return json({ message: "该邮箱已存在" }, 409);
+    const id = crypto.randomUUID();
+    const now = isoNow();
+    const salt = password ? randomHex() : null;
+    const hash = password ? await passwordHash(password, salt) : null;
+    const statements = [
+      env.DB.prepare("INSERT INTO users (id, email, name, role, status, created_at, password_hash, password_salt, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)").bind(id, email, name || email.split("@")[0], role, now, hash, salt, now),
+      env.DB.prepare("INSERT INTO user_points (user_id, balance, updated_at) VALUES (?, ?, ?)").bind(id, initialPoints, now),
+    ];
+    if (initialPoints > 0) statements.push(env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'admin_adjust', ?, ?, ?)").bind(crypto.randomUUID(), id, initialPoints, admin.id, "管理员创建账户直充", now));
+    await env.DB.batch(statements);
+    await ensureReferralProfile(env, id);
+    return json({ ok: true, user: await enrichUser(env, { id, email, name: name || email.split("@")[0], role, status: "active", createdAt: now }) }, 201);
+  }
+
+  const userMatch = route.match(/^admin\/users\/([^/]+)$/);
+  if (userMatch && request.method === "PATCH") {
+    const admin = await currentUser(request, env);
+    if (!admin || admin.role !== "admin") return json({ message: "无管理员权限" }, 403);
+    const target = await env.DB.prepare("SELECT id, email, role, status FROM users WHERE id = ?").bind(userMatch[1]).first();
+    if (!target) return json({ message: "用户不存在" }, 404);
+    const payload = await body(request);
+    const name = String(payload.name ?? "").trim().slice(0, 40);
+    const role = payload.role === "admin" ? "admin" : payload.role === "learner" ? "learner" : target.role;
+    const status = ["active", "suspended"].includes(payload.status) ? payload.status : target.status;
+    if (target.id === admin.id && status !== "active") return json({ message: "不能停用当前管理员账号" }, 400);
+    if (target.email === String(env.ADMIN_EMAIL || "").trim().toLowerCase() && role !== "admin") return json({ message: "不能移除默认管理员权限" }, 400);
+    const password = String(payload.password || "");
+    if (password && !validPassword(password)) return json({ message: "新密码至少 8 位" }, 400);
+    const now = isoNow();
+    const statements = [env.DB.prepare("UPDATE users SET name = CASE WHEN ? <> '' THEN ? ELSE name END, role = ?, status = ?, updated_at = ? WHERE id = ?").bind(name, name, role, status, now, target.id)];
+    if (password) {
+      const salt = randomHex();
+      statements.push(env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?").bind(await passwordHash(password, salt), salt, now, target.id));
+    }
+    if (status !== "active") statements.push(env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(target.id));
+    await env.DB.batch(statements);
+    return json({ ok: true });
+  }
+
+  if (userMatch && request.method === "DELETE") {
+    const admin = await currentUser(request, env);
+    if (!admin || admin.role !== "admin") return json({ message: "无管理员权限" }, 403);
+    if (userMatch[1] === admin.id) return json({ message: "不能删除当前管理员账号" }, 400);
+    const target = await env.DB.prepare("SELECT email FROM users WHERE id = ?").bind(userMatch[1]).first();
+    if (!target) return json({ message: "用户不存在" }, 404);
+    if (target.email === String(env.ADMIN_EMAIL || "").trim().toLowerCase()) return json({ message: "不能删除默认管理员账号" }, 400);
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET status = 'deleted', updated_at = ? WHERE id = ?").bind(isoNow(), userMatch[1]),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userMatch[1]),
+    ]);
+    return json({ ok: true });
+  }
+
+  const pointsMatch = route.match(/^admin\/users\/([^/]+)\/points$/);
+  if (pointsMatch && request.method === "POST") {
+    const admin = await currentUser(request, env);
+    if (!admin || admin.role !== "admin") return json({ message: "无管理员权限" }, 403);
+    const payload = await body(request);
+    const amount = Math.round(Number(payload.amount || 0) * 100) / 100;
+    const note = String(payload.note || "管理员直充").trim().slice(0, 100);
+    if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 100000) return json({ message: "积分调整金额无效" }, 400);
+    const target = await env.DB.prepare("SELECT id FROM users WHERE id = ? AND status = 'active'").bind(pointsMatch[1]).first();
+    if (!target) return json({ message: "用户不存在或不可用" }, 404);
+    const now = isoNow();
+    await env.DB.prepare("INSERT OR IGNORE INTO user_points (user_id, balance, updated_at) VALUES (?, 0, ?)").bind(target.id, now).run();
+    const updated = await env.DB.prepare("UPDATE user_points SET balance = balance + ?, updated_at = ? WHERE user_id = ? AND balance + ? >= 0").bind(amount, now, target.id, amount).run();
+    if (!updated.meta?.changes) return json({ message: "扣减后积分不能小于 0" }, 400);
+    await env.DB.prepare("INSERT INTO point_transactions (id, user_id, amount, type, reference_id, note, created_at) VALUES (?, ?, ?, 'admin_adjust', ?, ?, ?)").bind(crypto.randomUUID(), target.id, amount, admin.id, note, now).run();
+    return json({ ok: true });
+  }
+
   const grantMatch = route.match(/^admin\/users\/([^/]+)\/courses$/);
   if (request.method === "POST" && grantMatch) {
     const user = await currentUser(request, env);
     if (!user || user.role !== "admin") return json({ message: "无管理员权限" }, 403);
     const payload = await body(request);
-    const courseId = ["codex", "image", "career"].includes(payload.courseId) ? payload.courseId : "";
+    const courseId = ["codex", "image", "career", "works"].includes(payload.courseId) ? payload.courseId : "";
     if (!courseId) return json({ message: "课程编号无效" }, 400);
     await env.DB.prepare("INSERT OR IGNORE INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), grantMatch[1], courseId, user.id, isoNow()).run();
+    return json({ ok: true, courseId });
+  }
+
+  const revokeMatch = route.match(/^admin\/users\/([^/]+)\/courses\/([^/]+)$/);
+  if (request.method === "DELETE" && revokeMatch) {
+    const admin = await currentUser(request, env);
+    if (!admin || admin.role !== "admin") return json({ message: "无管理员权限" }, 403);
+    const courseId = ["codex", "image", "career", "works"].includes(revokeMatch[2]) ? revokeMatch[2] : "";
+    if (!courseId) return json({ message: "课程编号无效" }, 400);
+    await env.DB.prepare("DELETE FROM course_entitlements WHERE user_id = ? AND course_id = ?").bind(revokeMatch[1], courseId).run();
     return json({ ok: true, courseId });
   }
 

@@ -36,6 +36,24 @@ async function request(path, options = {}) {
 
 export function isDemoAuth() { return DEMO_MODE }
 
+export async function passwordRegister(email, name, password, inviteCode = '') {
+  const payload = await request('/auth/password-register', { method: 'POST', body: JSON.stringify({ email, name, password, inviteCode }) })
+  if (payload.user) writeJson(STORAGE.session, payload.user)
+  return payload
+}
+
+export async function passwordLogin(email, password) {
+  const payload = await request('/auth/password-login', { method: 'POST', body: JSON.stringify({ email, password }) })
+  if (payload.user) writeJson(STORAGE.session, payload.user)
+  return payload
+}
+
+export async function resetPassword(email, code, password) {
+  const payload = await request('/auth/password-reset', { method: 'POST', body: JSON.stringify({ email, code, password }) })
+  if (payload.user) writeJson(STORAGE.session, payload.user)
+  return payload
+}
+
 export async function requestAuthCode(email, name = '') {
   try {
     return await request('/auth/request-code', { method: 'POST', body: JSON.stringify({ email, name }) })
@@ -188,6 +206,26 @@ export async function grantCourse(userId, courseId) {
     if (current?.id === userId) writeJson(STORAGE.session, { ...current, unlockedCourses: [...new Set([...(current.unlockedCourses || []), courseId])] })
     return { ok: true, courseId, demo: true }
   }
+}
+
+export async function revokeCourse(userId, courseId) {
+  return request('/admin/users/' + userId + '/courses/' + encodeURIComponent(courseId), { method: 'DELETE' })
+}
+
+export async function createAdminUser(user) {
+  return request('/admin/users', { method: 'POST', body: JSON.stringify(user) })
+}
+
+export async function updateAdminUser(userId, update) {
+  return request('/admin/users/' + userId, { method: 'PATCH', body: JSON.stringify(update) })
+}
+
+export async function deleteAdminUser(userId) {
+  return request('/admin/users/' + userId, { method: 'DELETE' })
+}
+
+export async function adjustAdminPoints(userId, amount, note = '') {
+  return request('/admin/users/' + userId + '/points', { method: 'POST', body: JSON.stringify({ amount: Number(amount), note }) })
 }
 
 export async function redeemPoints(code) {
