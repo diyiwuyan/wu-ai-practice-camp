@@ -92,7 +92,9 @@ CREATE TABLE IF NOT EXISTS course_prices (
 );
 
 INSERT OR IGNORE INTO course_prices (course_id, points, updated_at) VALUES
-  ('codex', 49.9, CURRENT_TIMESTAMP),
+  ('codex-entry', 49.9, CURRENT_TIMESTAMP),
+  ('codex-advanced', 79.9, CURRENT_TIMESTAMP),
+  ('codex-orange-book', 9.9, CURRENT_TIMESTAMP),
   ('image', 49.9, CURRENT_TIMESTAMP),
   ('career', 49.9, CURRENT_TIMESTAMP);
 

@@ -74,7 +74,7 @@ export const knowledgeItems = [
     id: 'codex-delivery', type: '操作清单', title: 'Codex 项目交付：读项目、做计划、改小步、跑验证',
     summary: '把 Codex 当工程执行者，而不是代码生成按钮。', tool: 'Codex',
     tags: ['Codex', '开发', '交付'], author: '武同学', updatedAt: '2026-07-16', useCount: 498,
-    courseId: 'codex', courseLabel: 'Codex 橙皮书 · 第四篇：标准工作流',
+    courseId: 'codex-entry', courseLabel: 'Codex 入口课程 · 第 04—07 章',
     sections: [['先读项目', '确认技术栈、入口、构建命令、测试命令、约束文件和不能随便改的目录。'], ['小步执行', '先提出方案和计划，再只改一个模块；每次修改后都查看 diff，避免无关重构。'], ['交付前验证', '运行构建、测试和关键路径检查，整理变更摘要、已知风险和下一步建议。']],
   },
   {
@@ -97,5 +97,13 @@ export const knowledgeItems = [
     tags: ['多 Agent', '工作流', '审查'], author: '武同学', updatedAt: '2026-07-13', useCount: 398,
     courseId: 'free', courseLabel: 'WorkBuddy 免费实战课 · 第 32 章', chapterNumber: '32',
     sections: [['先判断是否需要', '任务足够复杂、需要并行、权限隔离或独立评审时才拆分，不为增加角色而增加角色。'], ['定义交接格式', '每个角色明确输入、输出、证据和失败时的处理方式，不能只写“交给下一个 Agent”。'], ['设置独立审查', '重要结论、代码和对外材料最好有独立检查者，避免一个错误在角色之间重复传播。']],
+  },
+  {
+    id: 'codex-orange-book', type: '操作清单', title: 'Codex 橙皮书 · 知识库专辑',
+    summary: '把 Codex 的入口、核心能力、标准工作流、实战案例和第三方模型边界，整理成一套可检索的知识资料。', tool: 'Codex',
+    tags: ['Codex', '橙皮书', '知识专辑'], author: '武同学', updatedAt: '2026-08-01', useCount: 0,
+    accessId: 'codex-orange-book', price: 9.9, paidLabel: '9.9 积分解锁',
+    sections: [['它是什么', '橙皮书不再作为一门线性课程售卖，而是作为知识库里的 Codex 参考专辑：需要查入口、功能、工作流或案例时，可以直接检索。'], ['包含内容', '重要声明与阅读路线、App/CLI/IDE/Web 入口、Skill、插件、MCP、Git、自动化、云端运行、记忆系统、任务模板和 5 个案例索引。'], ['怎么使用', '先学 Codex 入口课程建立基础，再把本专辑当作查漏补缺和快速检索资料；进阶实战课则负责把能力做成作品。']],
+    prompt: '请把我当前的 Codex 任务映射到橙皮书知识专辑：需要查哪些入口、核心能力、标准工作流或案例？先给出对应知识主题、适用原因和需要我补充的输入，不要直接执行外部操作。',
   },
 ]
