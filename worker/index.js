@@ -65,7 +65,8 @@ function randomHex(bytesLength = 16) {
 
 async function passwordHash(password, salt) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 310000, hash: "SHA-256" }, key, 256);
+  // Workers 免费实例的单请求 CPU 预算较紧；10k 次 PBKDF2 仍比明文/单次哈希安全，且不会让注册请求超时。
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 10000, hash: "SHA-256" }, key, 256);
   return [...new Uint8Array(bits)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
@@ -338,7 +339,7 @@ async function handleApi(request, env, url) {
   if (request.method === "POST" && unlockMatch) {
     const user = await currentUser(request, env);
     if (!user) return json({ message: "请先登录" }, 401);
-    const courseId = ["codex", "image", "career"].includes(unlockMatch[1]) ? unlockMatch[1] : "";
+    const courseId = ["codex-entry", "codex-advanced", "codex-orange-book", "image", "career"].includes(unlockMatch[1]) ? unlockMatch[1] : "";
     if (!courseId) return json({ message: "课程编号无效" }, 400);
     if (user.unlockedCourses.includes(courseId)) return json({ ok: true, alreadyUnlocked: true, user });
     const price = await getCoursePrice(env, courseId);
@@ -551,7 +552,7 @@ async function handleApi(request, env, url) {
     const user = await currentUser(request, env);
     if (!user || user.role !== "admin") return json({ message: "无管理员权限" }, 403);
     const payload = await body(request);
-    const courseId = ["codex", "image", "career", "works"].includes(payload.courseId) ? payload.courseId : "";
+    const courseId = ["codex-entry", "codex-advanced", "codex-orange-book", "image", "career", "works"].includes(payload.courseId) ? payload.courseId : "";
     if (!courseId) return json({ message: "课程编号无效" }, 400);
     await env.DB.prepare("INSERT OR IGNORE INTO course_entitlements (id, user_id, course_id, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)").bind(crypto.randomUUID(), grantMatch[1], courseId, user.id, isoNow()).run();
     return json({ ok: true, courseId });
@@ -561,7 +562,7 @@ async function handleApi(request, env, url) {
   if (request.method === "DELETE" && revokeMatch) {
     const admin = await currentUser(request, env);
     if (!admin || admin.role !== "admin") return json({ message: "无管理员权限" }, 403);
-    const courseId = ["codex", "image", "career", "works"].includes(revokeMatch[2]) ? revokeMatch[2] : "";
+    const courseId = ["codex-entry", "codex-advanced", "codex-orange-book", "image", "career", "works"].includes(revokeMatch[2]) ? revokeMatch[2] : "";
     if (!courseId) return json({ message: "课程编号无效" }, 400);
     await env.DB.prepare("DELETE FROM course_entitlements WHERE user_id = ? AND course_id = ?").bind(revokeMatch[1], courseId).run();
     return json({ ok: true, courseId });
