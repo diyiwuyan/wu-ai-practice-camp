@@ -1,0 +1,15 @@
+[Unit]
+Description=Wu AI Practice Camp domestic API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/wu-ai-practice-camp-api
+EnvironmentFile=/opt/wu-ai-practice-camp-api/.env
+ExecStart=/usr/bin/node /opt/wu-ai-practice-camp-api/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
