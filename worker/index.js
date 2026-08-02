@@ -7,7 +7,12 @@ function corsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
   const allowed = String(env.CORS_ORIGIN || "https://diyiwuyan.github.io").split(",").map((item) => item.trim()).filter(Boolean);
   const headers = { "Vary": "Origin" };
-  if (allowed.includes(origin)) {
+  // GitHub Pages 是主站；同时允许已知自有域、本地预览和腾讯云 CloudBase 预览域。
+  // 返回的仍是请求本身的 Origin，不会把凭据开放给任意站点。
+  const trustedPreview = /^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.tcb\.qcloud\.la$/i.test(origin);
+  const trustedLocal = /^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i.test(origin);
+  const trustedDomain = ["https://abcdabcd.cc", "https://www.abcdabcd.cc"].includes(origin);
+  if (allowed.includes(origin) || trustedPreview || trustedLocal || trustedDomain) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Credentials"] = "true";
     headers["Access-Control-Allow-Headers"] = "Content-Type";
