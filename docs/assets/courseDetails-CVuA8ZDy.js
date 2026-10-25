@@ -1,4 +1,4 @@
-const n={10:{sourceToken:"CPF5dKCxHodMMzxyeLxcP9RRnhd",markdown:`# 第 10 章 WorkBuddy 自动化任务
+import{a as n}from"./index-CczquMkY.js";const e={10:{sourceToken:"CPF5dKCxHodMMzxyeLxcP9RRnhd",markdown:`# 第 10 章 WorkBuddy 自动化任务
 
 **本章重点：**为什么 WorkBuddy 可以自动化、自动化能用来做什么。
 
@@ -4271,4 +4271,4 @@ WorkBuddy支持接入其他 LLM 的 API，以及 Coding Plan、Token Plan 等套
 
 4、保存，使用时选择你刚才保存的模型就行
 
-![图片展示了WorkBuddy的界面，右下角模型选择框中显示“agnes-2.0-flash”，并有红色框突出显示。该图片与文档中设置自定义模型的上下文相关，用于说明在WorkBuddy中选择自定义模型时，模型名称的显示位置，即在模型选择框中会呈现所选模型的名称，帮助用户确认当前使用的模型。](assets/course-media/chapter-09/image-04.png)`}};export{n as courseDetails};
+![图片展示了WorkBuddy的界面，右下角模型选择框中显示“agnes-2.0-flash”，并有红色框突出显示。该图片与文档中设置自定义模型的上下文相关，用于说明在WorkBuddy中选择自定义模型时，模型名称的显示位置，即在模型选择框中会呈现所选模型的名称，帮助用户确认当前使用的模型。](assets/course-media/chapter-09/image-04.png)`}};n({courseDetails:e});export{e as courseDetails};
