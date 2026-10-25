@@ -34,6 +34,9 @@ import { careerLessonContent } from './courseLessonContent'
 import { addSubmissionComment, adjustAdminPoints, createAdminUser, createRedemptionCodes, createSubmission, deleteAdminUser, getAdminDashboard, getPublishedSubmissions, getReferralSummary, getSession, getSubmissionComments, grantCourse, isDemoAuth, logout, passwordLogin, passwordRegister, redeemPoints, requestAuthCode, resetPassword, reviewSubmission, revokeCourse, toggleSubmissionLike, unlockCourse, updateAdminUser, verifyAuthCode } from './community'
 import { knowledgeItems, knowledgeTypes } from './knowledgeContent'
 import { skillCatalog, skillCategories } from './skillCatalog'
+import { applyImageCourseUpdates } from './currentCourseUpdates'
+
+applyImageCourseUpdates({ imageCourseGroups, imageCourseChapterContent })
 
 const tutorials = [
   {
@@ -162,7 +165,7 @@ const paidCourses = {
   image: {
     id: 'image',
     title: 'AI生图训练营',
-    description: '从 ChatGPT Image 的基础功能、万能提示词、商业精修到电商、知识付费、PPT 与真实商单，完整迁入原课 377 张案例图。',
+    description: '从 ChatGPT Images 的基础功能、万能提示词、商业精修到电商、知识付费、PPT 与真实商单，完整迁入原课 377 张案例图。',
     audience: '内容创作者、运营、品牌和设计初学者', duration: '建议 4 周', status: '积分课程', label: '积分解锁', cover: 'assets/image-course-feishu/lesson1-02.png', benefit: '完成一套可发布、可报价、可复用的 AI 生图作品',
     price: { original: 199, sale: 49.9 },
     outputs: ['从需求到精修的一套商业生图流程', '电商、海报、知识付费、PPT 与知识卡真实案例', 'PromptCard 参考图反推实操', '原课程 377 张图片与提示词图册'],
@@ -885,7 +888,7 @@ function CourseReader({ chapter, details, loadError, completedChapters, onBack, 
               <p>{chapter.intro}</p>
               <div className="course-reader-chapter-meta"><span>{chapter.time}</span><span>目标产出：{chapter.output}</span></div>
             </div>
-            <div className="course-reader-source-note"><span>飞书第二稿 · 原文迁移</span><span>正文、图片、表格、Prompt 已保留</span></div>
+            <div className="course-reader-source-note"><span>工具说明已按官方文档核验 · 2026-10-25</span><span>截图仅作示意，菜单、模型、额度与权限以当前客户端为准</span></div>
             <div className="course-markdown" dangerouslySetInnerHTML={{ __html: sourceHtml }} />
             <div className="course-reader-practice">
               <p className="eyebrow orange"><span /> 本章学习卡</p>

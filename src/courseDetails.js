@@ -1,3 +1,5 @@
+import { applyCurrentCourseUpdates } from './currentCourseUpdates'
+
 export const courseDetails = {
   "10": {
     "sourceToken": "CPF5dKCxHodMMzxyeLxcP9RRnhd",
@@ -140,3 +142,5 @@ export const courseDetails = {
     "markdown": "# 第 9 章 接入外部模型API\n\n**本章重点：**本章的核心概念与操作方法。\n\n阅读顺序：先理解判断原则，再照案例或模板完成一次小任务，最后按验收项复核。\n\n\n\nWorkBuddy支持接入其他 LLM 的 API，以及 Coding Plan、Token Plan 等套餐。\n\n![图片展示了WorkBuddy的界面及模型配置选项。左侧为WorkBuddy的宣传语及功能分类，下方有“今天帮你做些什么？”的提示。右侧是模型列表，显示了多种模型及倍数，如Hy3、GLM - 5.2等。其中“配置自定义模型”选项被红色框线突出显示。该图片与文档中“设置方法”部分相关，对应步骤2，即在对话区点击【配置自定义模型】，选择模型提供商并输入相关信息。](assets/course-media/chapter-09/image-01.png)\n\n## 场景：\n\n1、适合有自己的大模型 API，没有workbuddy积分\n\n2、workbuddy没有合适的模型（比如国外某些模型）\n\n## 设置方法\n\n1、在对话区点击【配置自定义模型】\n\n2、选择模型提供商，输入API key 和模型名称（如果不会填可以查看文档）\n\n![图片展示的是工作Buddy中添加自定义模型的界面。界面中显示了“添加模型”弹窗，支持仅支持OpenAI兼容协议API，提供腾讯云Token Plan/通用Token Plan（个人版）的供应商选项。下方有“输入你的API Key”和“模型名称”输入框，以及“取消”和“保存”按钮。该界面与文档中设置自定义模型的方法相关，对应在对话区点击【配置自定义模型】后，选择【自定义costom】，填写接口地址的步骤。](assets/course-media/chapter-09/image-02.png)\n\n比如，DeepSeek，你只需要输入api key即可，\n\n3、如果你的供应商不在范围内，选择【自定义costom】，填写接口地址（供应商后台有）\n\n![图片展示的是“编辑模型”界面，仅支持OpenAI兼容协议API。界面中“提供商”下拉菜单选中“自定义/Custom”，接口地址为“https://apihub.agnes-ai.com/v1”，API Key被遮挡。模型名称为“agnes-2.0-flash”，高级配置中“仅思考模式”和“允许关闭思考”已勾选。下方有“默认思考强度”下拉菜单，支持的思考强度有低、中、高、超高等选项，输入和输出支持的格式有32K、64K、128K、256K、8K、16K、32K、64K等。该界面与文档中设置自定义模型的方法相关，用于填写自定义模型的接口地址、API Key等信息。](assets/course-media/chapter-09/image-03.png)\n\n4、保存，使用时选择你刚才保存的模型就行\n\n![图片展示了WorkBuddy的界面，右下角模型选择框中显示“agnes-2.0-flash”，并有红色框突出显示。该图片与文档中设置自定义模型的上下文相关，用于说明在WorkBuddy中选择自定义模型时，模型名称的显示位置，即在模型选择框中会呈现所选模型的名称，帮助用户确认当前使用的模型。](assets/course-media/chapter-09/image-04.png)"
   }
 }
+
+applyCurrentCourseUpdates({ courseDetails })
