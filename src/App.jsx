@@ -34,7 +34,7 @@ import { careerLessonContent } from './courseLessonContent'
 import { addSubmissionComment, adjustAdminPoints, createAdminUser, createRedemptionCodes, createSubmission, deleteAdminUser, getAdminDashboard, getPublishedSubmissions, getReferralSummary, getSession, getSubmissionComments, grantCourse, isDemoAuth, logout, passwordLogin, passwordRegister, redeemPoints, requestAuthCode, resetPassword, reviewSubmission, revokeCourse, toggleSubmissionLike, unlockCourse, updateAdminUser, verifyAuthCode } from './community'
 import { knowledgeItems, knowledgeTypes } from './knowledgeContent'
 import { skillCatalog, skillCategories } from './skillCatalog'
-import { applyImageCourseUpdates } from './currentCourseUpdates'
+import { applyImageCourseUpdates, softwareAudit } from './currentCourseUpdates'
 
 applyImageCourseUpdates({ imageCourseGroups, imageCourseChapterContent })
 
@@ -341,7 +341,7 @@ function SkillDetailModal({ skill, onNotify }) {
     <h2>{skill.title || skill.name}</h2>
     <div className="skill-detail-name">{skill.name} · {skill.category}</div>
     <p>{skill.detail}</p>
-    <div className="skill-detail-meta"><span>适合：{skill.audience}</span><span>{skill.rank}</span><span>安装量：{skill.installs}</span><span>{skill.source}</span></div>
+    <div className="skill-detail-meta"><span>适合：{skill.audience}</span><span>{skill.rank}</span><span>{skill.installs}</span><span>{skill.source}</span><span>核验：{skill.lastVerified || softwareAudit.checkedAt}</span></div>
     <div className="skill-benefit"><b>它能帮你</b><strong>{skill.benefit}</strong></div>
     <section className="skill-steps"><b>使用方法</b><ol>{skill.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, '0')}</span>{step}</li>)}</ol></section>
     <section className="skill-install"><div className="prompt-library-heading"><b>安装命令</b><button className="text-link" onClick={() => { navigator.clipboard?.writeText(skill.installCommand); onNotify('安装命令已复制') }}>复制命令 <ArrowRight size={15} /></button></div><code>{skill.installCommand}</code><small className="skill-security">安全提示：{skill.audit}</small></section>
@@ -365,7 +365,7 @@ function SkillGalleryModal({ items, onSelect }) {
   }, [items.length])
   const recommended = items[recommendIndex]
   return <div className="skill-gallery-content">
-    <div className="course-modal-heading"><div><span className="modal-icon"><SquaresFour size={26} /></span><p className="eyebrow orange"><span /> Skill 广场</p><h2>找到一个真正能安装的 Skill</h2><p>这里展示来自 skills.sh 榜单、官方仓库和高质量社区仓库的真实 Skill。每个条目都有安装命令、仓库、用途和安全提示。</p></div><div className="course-modal-stats"><span><strong>{items.length}</strong><small>已整理 Skill</small></span><span><strong>滚动推荐</strong><small>榜单更新</small></span></div></div>
+    <div className="course-modal-heading"><div><span className="modal-icon"><SquaresFour size={26} /></span><p className="eyebrow orange"><span /> Skill 广场</p><h2>找到一个真正能安装的 Skill</h2><p>这里展示来自 skills.sh 榜单、官方仓库和高质量社区仓库的真实 Skill。每个条目都有安装命令、仓库、用途和安全提示。</p><small className="skill-catalog-note">榜单排名和安装量不固化 · 最近核验：{softwareAudit.checkedAt} · 安装前仍需阅读仓库内容</small></div><div className="course-modal-stats"><span><strong>{items.length}</strong><small>已整理 Skill</small></span><span><strong>滚动推荐</strong><small>榜单更新</small></span></div></div>
     <div className="skill-recommendation"><span className="skill-recommendation-label">正在推荐</span><b>{recommended.title || recommended.name}</b><small>{recommended.rank} · {recommended.installs} 安装</small><button className="text-link" onClick={() => onSelect(recommended)}>查看并安装 <ArrowRight size={15} /></button></div>
     <label className="skill-gallery-search"><MagnifyingGlass size={17} /><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索办公、写作、生图、数据、自媒体或 Skill 名称" /></label>
     <div className="skill-gallery-filter">{skillCategories.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
@@ -888,7 +888,7 @@ function CourseReader({ chapter, details, loadError, completedChapters, onBack, 
               <p>{chapter.intro}</p>
               <div className="course-reader-chapter-meta"><span>{chapter.time}</span><span>目标产出：{chapter.output}</span></div>
             </div>
-            <div className="course-reader-source-note"><span>工具说明已按官方文档核验 · 2026-10-25</span><span>截图仅作示意，菜单、模型、额度与权限以当前客户端为准</span></div>
+            <div className="course-reader-source-note"><span>工具说明已按官方文档核验 · {softwareAudit.checkedAt}</span><span>截图仅作示意，菜单、模型、额度与权限以当前客户端为准</span></div>
             <div className="course-markdown" dangerouslySetInnerHTML={{ __html: sourceHtml }} />
             <div className="course-reader-practice">
               <p className="eyebrow orange"><span /> 本章学习卡</p>
@@ -1282,6 +1282,7 @@ export function App() {
               <span><strong>300+</strong><small>课程持续更新</small></span>
               <span><strong>可复用</strong><small>把方法沉淀下来</small></span>
             </div>
+            <small className="hero-audit-note">软件课程最近核验：{softwareAudit.checkedAt} · 软件入口以官方页面为准</small>
           </div>
           <CourseHeroCarousel courses={courseCatalog} onOpen={openCatalogCourse} />
         </section>

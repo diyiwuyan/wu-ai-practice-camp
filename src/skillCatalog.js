@@ -1,7 +1,7 @@
 import { CheckCircle, FileText, Lightbulb, MagnifyingGlass, PaperPlaneTilt, Sparkle, SquaresFour, TrendUp } from '@phosphor-icons/react'
 import { expandedSkillCatalog } from './skillCatalogExpanded.js'
 
-// 榜单数据按 2026-07-25 的 skills.sh / GitHub 页面整理；安装命令、仓库和技能页均可直接打开。
+// 技能条目的仓库、安装命令和技能页可直接打开；排名与安装量只在核验时展示，不作为长期事实。
 const coreSkillCatalog = [
   {
     id: 'find-skills', icon: SquaresFour, name: 'find-skills', title: '发现和安装更多 Skill', category: '发现与管理', detail: '让 AI 先从 Skill 广场找合适的能力，再按需安装。', audience: '不知道该装什么 Skill 的人', benefit: '把“有没有现成能力”变成可搜索、可安装的工作流。', rank: 'All-time #1', installs: '2.7M', stars: '27.1K', source: 'Vercel Labs 官方', audit: 'Trust Hub / Socket 通过；Snyk 提醒', installCommand: 'npx skills add https://github.com/vercel-labs/skills --skill find-skills', repoUrl: 'https://github.com/vercel-labs/skills', marketUrl: 'https://www.skills.sh/vercel-labs/skills/find-skills', steps: ['安装后让 AI 按任务搜索 Skill', '先看来源、安装量和审查状态', '确认仓库内容后再安装到对应 Agent']
@@ -52,6 +52,12 @@ const expandedSkills = expandedSkillCatalog
   .filter((item) => !coreSkillCatalog.some((core) => core.name === item.name))
   .map((item, index) => ({ ...item, icon: expandedIcons[index % expandedIcons.length] }))
 
-export const skillCatalog = [...coreSkillCatalog, ...expandedSkills]
+export const skillCatalogVerifiedAt = '2026-10-25'
+export const skillCatalog = [...coreSkillCatalog, ...expandedSkills].map((skill) => ({
+  ...skill,
+  rank: '以当前榜单为准',
+  installs: '动态数据',
+  lastVerified: skillCatalogVerifiedAt,
+}))
 
 export const skillCategories = ['全部', ...new Set(skillCatalog.map((skill) => skill.category))]

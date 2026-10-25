@@ -1,4 +1,8 @@
 const replaceAll = (text, replacements) => replacements.reduce((result, [from, to]) => result.split(from).join(to), text)
+const appendOnce = (chapter, marker, section) => {
+  if (!chapter?.markdown || chapter.markdown.includes(marker)) return
+  chapter.markdown = `${chapter.markdown.trim()}\n\n${section.trim()}\n`
+}
 
 export const softwareAudit = {
   checkedAt: '2026-10-25',
@@ -124,6 +128,56 @@ export function applyCurrentCourseUpdates({ courseDetails, worksCourseDetails } 
       ['选择【自定义costom】，填写接口地址（供应商后台有）', '选择「自定义 / Custom」，按供应商后台填写接口地址、API Key 和模型名称；保存前先确认费用、数据流向和权限。'],
     ])
   }
+
+  appendOnce(courseDetails?.['09'], '## 当前版本补充：模型与数据边界', `## 当前版本补充：模型与数据边界
+
+截至 2026-10-25，WorkBuddy 官方更新日志已经进入 5.9 系列。自定义模型除了填写接口地址、API Key 和模型名称，还要确认供应商是否可信、数据会发送到哪里、费用如何计算，以及是否需要额外的权限。
+
+- 不要把 API Key、Cookie 或企业数据粘贴到公开对话或截图中。
+- 先用无敏感信息的小样本测试，再处理真实资料。
+- 自定义模型的可用模型、套餐和客户端入口会变化，优先以 [官方模型配置文档](https://www.workbuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Model) 和 [官方更新日志](https://www.workbuddy.cn/docs/workbuddy/Changelog) 为准。
+`)
+
+  appendOnce(courseDetails?.['10'], '## 当前版本补充：让自动化可观察', `## 当前版本补充：让自动化可观察
+
+自动化任务不要只验证“能不能跑”，还要验证“出了问题能不能发现和接管”。建议按下面顺序上线：
+
+1. 先运行一次性任务或草稿模式，确认输入、输出和费用。
+2. 保留任务历史、执行状态、失败原因和最终产物。
+3. 为需要人工判断的动作保留审批点，不要默认自动发布或批量发送。
+4. 设置通知和失败后的人工接管路径，再逐步提高频率和权限。
+
+具体入口和任务能力以 [WorkBuddy 自动化文档](https://www.workbuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Automation-Guide) 为准。
+`)
+
+  appendOnce(courseDetails?.['15'], '## 当前版本补充：资讯来源与核验', `## 当前版本补充：资讯来源与核验
+
+资讯整合不仅是摘要，还要保留原始链接、发布时间和事实核验状态。对腾讯文档等外部资料，优先使用官方连接器或授权入口；不要把搜索结果摘要当作事实本身。
+
+每条最终进入简报的内容至少保留：来源、发布时间、事实摘要、与工作的关系、待核验点和下一步动作。
+`)
+
+  appendOnce(courseDetails?.['16'], '## 当前版本补充：知识库权限', `## 当前版本补充：知识库权限
+
+当前 WorkBuddy 继续增强腾讯文档等知识库连接能力。导入文件夹、搜索和上传前，先确认连接器授权范围，只开放完成当前任务所需的目录；首次接入建议先做只读检索，再测试写入或同步。
+
+连接器入口和具体权限以 [官方连接器文档](https://open.workbuddy.cn/docs/connector) 为准。
+`)
+
+  appendOnce(courseDetails?.['27'], '## 当前版本补充：微信读书授权顺序', `## 当前版本补充：微信读书授权顺序
+
+微信读书 Skill 只从 [官方仓库](https://github.com/Tencent/WeChatReading) 获取。第一次配置时先完成只读书架盘点，确认返回的是自己的数据，再做划线整理；API Key、登录凭据和个人阅读数据不要放进公开仓库、截图或共享 Prompt。
+`)
+
+  appendOnce(courseDetails?.['30'], '## 当前版本补充：Skill 交付标准', `## 当前版本补充：Skill 交付标准
+
+一个可交付的 Skill 至少应包含：触发条件、输入输出、权限边界、失败处理、测试样例、版本记录和卸载方式。安装前先阅读仓库里的 \`SKILL.md\`、脚本和依赖；不要因为榜单排名或安装量就直接信任。
+`)
+
+  appendOnce(courseDetails?.['33'], '## 当前版本补充：可靠性验收', `## 当前版本补充：可靠性验收
+
+上线自动化前，至少保留一次成功样本、一次失败样本和一次人工接管记录。每次迭代只改一个变量，并记录输入、版本、日志、产物和回滚方式；涉及对外发送、付费或删除操作时，默认停在人工确认。
+`)
 
   Object.values(courseDetails || {}).forEach((chapter) => {
     if (!chapter?.markdown) return
